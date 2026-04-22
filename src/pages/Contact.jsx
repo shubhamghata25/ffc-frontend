@@ -85,7 +85,7 @@ export default function Contact() {
               <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10 }}>
                 <iframe
                   title="gym-map"
-                  src="https://www.google.com/maps?q=21.139439,78.9511659&output=embed"
+                  src="https://www.google.com/maps?q=Friends+Fitness+Club+Nagpur&ll=21.139439,78.9511659&z=17&output=embed"
                   width="100%"
                   height="220"
                   style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }}
