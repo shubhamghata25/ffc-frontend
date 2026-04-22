@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import AdminStore     from '../admin/AdminStore.jsx'
 import AdminExercises from '../admin/AdminExercises.jsx'
+import AdminPricing   from '../admin/AdminPricing.jsx'
 
 const ADMIN_USER = 'admin'
 const ADMIN_PASS = 'gym@admin123'
@@ -46,15 +47,15 @@ function resizeImage(dataUrl, maxW=800, quality=0.75) {
 
 /* ─── COLOURS ─────────────────────────────────────────────── */
 const C = {
-  bg:'#0a0a0a', surface:'#111', card:'#181818', border:'#222',
-  accent:'#ff3c00', accentG:'rgba(255,60,0,0.12)',
-  text:'#fff', muted:'#777', success:'#22c55e', warn:'#f59e0b', danger:'#ef4444',
+  bg:'#06050f', surface:'#0d0b1a', card:'#130f24', border:'#2a2347',
+  accent:'#7c3aed', accentL:'#9c59f7', accentG:'rgba(124,58,237,0.12)',
+  text:'#f0eeff', muted:'#6b6490', success:'#22c55e', warn:'#f59e0b', danger:'#ef4444',
 }
 
 const CSS = `
   @keyframes spin   { to{transform:rotate(360deg)} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes glow   { 0%,100%{text-shadow:0 0 18px rgba(255,60,0,.6)} 50%{text-shadow:0 0 36px rgba(255,60,0,1)} }
+  @keyframes glow   { 0%,100%{text-shadow:0 0 18px rgba(124,58,237,.7)} 50%{text-shadow:0 0 36px rgba(124,58,237,1)} }
   .adm-fade { animation:fadeUp .4s ease both }
   .adm-row:hover td { background:rgba(255,255,255,0.025) }
   .adm-nav { display:flex;align-items:center;gap:11px;padding:13px 22px;cursor:pointer;transition:all .2s;font-size:14px;font-weight:500;border-left:3px solid transparent }
@@ -109,7 +110,7 @@ const FR = ({ label, children }) => (
   </div>
 )
 
-const inp = {width:'100%',padding:'10px 14px',background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontFamily:"'Poppins',sans-serif",fontSize:13,outline:'none'}
+const inp = {width:'100%',padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:10,color:C.text,fontFamily:"'Poppins',sans-serif",fontSize:13,outline:'none',transition:'border-color .2s'}
 const Spinner = ({size=16}) => <span style={{width:size,height:size,border:'2px solid rgba(255,255,255,0.2)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
 
 const Table = ({ heads, children, empty }) => (
@@ -204,7 +205,7 @@ function LoginPage({ onLogin }) {
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:`radial-gradient(ellipse at 60% 40%,rgba(255,60,0,0.15) 0%,${C.bg} 65%)`}}>
       <div className="adm-fade" style={{width:380,textAlign:'center'}}>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:52,letterSpacing:4,color:C.accent,animation:'glow 2.5s infinite',marginBottom:4}}>FFC</div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:52,letterSpacing:4,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'glow 2.5s infinite',marginBottom:4}}>FFC</div>
         <div style={{fontSize:11,color:C.muted,letterSpacing:3,marginBottom:36}}>ADMIN PORTAL</div>
         <Card style={{padding:36}}>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,marginBottom:24}}>SIGN IN</div>
@@ -620,6 +621,7 @@ const NAV = [
   {id:'leads',     icon:'📬', label:'Leads'      },
   {id:'trainers',  icon:'🏋', label:'Trainers'  },
   {id:'store',     icon:'🛒', label:'Store'      },
+  {id:'pricing',   icon:'💳', label:'Pricing'    },
   {id:'exercises', icon:'🏃', label:'Exercises'  },
   {id:'settings',  icon:'⚙️',  label:'Settings'   },
 ]
@@ -629,7 +631,7 @@ function Sidebar({ active, onChange, onLogout, collapsed }) {
   return(
     <aside className="adm-sidebar" style={{width:W,minHeight:'100vh',background:C.surface,borderRight:`1px solid ${C.border}`,position:'fixed',top:0,left:0,zIndex:100,display:'flex',flexDirection:'column',transition:'width .3s',overflow:'hidden'}}>
       <div style={{padding:collapsed?'22px 0':'24px 20px',borderBottom:`1px solid ${C.border}`,textAlign:collapsed?'center':'left',whiteSpace:'nowrap'}}>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:3,color:C.accent}}>{collapsed?'F':'FFC'}</div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:3,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>{collapsed?'F':'FFC'}</div>
         {!collapsed&&<div style={{fontSize:9,color:C.muted,letterSpacing:2,marginTop:2}}>ADMIN PORTAL</div>}
       </div>
       <nav style={{flex:1,padding:'10px 0'}}>
@@ -697,6 +699,7 @@ export default function AdminPage() {
     leads:     <Leads     leads={leads}       reload={loadAll} toast={showToast}/>,
     trainers:  <Trainers  trainers={trainers} reload={loadAll} toast={showToast}/>,
     store:     <AdminStore     {...shared}/>,
+    pricing:   <AdminPricing   {...shared}/>,
     exercises: <AdminExercises {...shared}/>,
     settings:  <Settings  onLogout={()=>setAuth(false)}/>,
   }
