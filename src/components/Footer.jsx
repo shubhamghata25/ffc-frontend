@@ -30,8 +30,8 @@ const Icons = {
 
 const SOCIAL = [
   { key:'Instagram', label:'Instagram',   url:'https://www.instagram.com/friends_fitness.club', color:'#E1306C' },
-  { key:'YouTube',   label:'YouTube',     url:'https://www.youtube.com/@friendsfitnessclub',    color:'#FF0000' },
-  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/friendsfitnessclub',    color:'#1877F2' },
+  { key:'YouTube',   label:'YouTube',     url:'https://www.youtube.com/@nagendrasingh0002/shorts',    color:'#FF0000' },
+  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/profile.php?id=61550631891260',    color:'#1877F2' },
   { key:'WhatsApp',  label:'WhatsApp',    url:'https://wa.me/918484805154',                     color:'#25D366' },
 ]
 
