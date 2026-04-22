@@ -84,7 +84,7 @@ export default function Contact() {
               {/* Map embed */}
               <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10 }}>
                 <iframe title="gym-map"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3721.1!2d79.08!3d21.13!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjHCsDA3JzQ4LjAiTiA3OcKwMDQnNDguMCJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
+                  src="https://www.google.com/maps/place/Friends+fitness+club/@21.139444,78.948591,17z/data=!3m2!4b1!5s0x3bd4eb6b2c0f34a5:0xad2ecc5c89b36e35!4m6!3m5!1s0x3bd4eb8092e96545:0xca49c353e889435!8m2!3d21.139439!4d78.9511659!16s%2Fg%2F11twj1zh3v?entry=ttu&g_ep=EgoyMDI2MDQxOS4wIKXMDSoASAFQAw%3D%3D"
                   width="100%" height="220" style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }} allowFullScreen loading="lazy"/>
               </div>
 
