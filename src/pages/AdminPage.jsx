@@ -131,7 +131,7 @@ const inp = {width:'100%',padding:'10px 14px',background:'rgba(255,255,255,0.04)
 const Spinner = ({size=16}) => <span style={{width:size,height:size,border:'2px solid rgba(255,255,255,0.2)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
 
 const Table = ({ heads, children, empty }) => (
-  <div style={{overflowX:'auto'}}>
+  <div className='adm-table-scroll' style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
     <table style={{width:'100%',borderCollapse:'collapse'}}>
       <thead><tr>{heads.map(h=><th key={h} style={{padding:'12px 16px',fontSize:11,textTransform:'uppercase',letterSpacing:.08,color:C.muted,borderBottom:`1px solid ${C.border}`,textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead>
       <tbody>{children}</tbody>
@@ -742,7 +742,7 @@ export default function AdminPage() {
         <Sidebar active={page} onChange={setPage} onLogout={()=>setAuth(false)} collapsed={collapsed}/>
         <div className="adm-main" style={{marginLeft:SL,flex:1,display:'flex',flexDirection:'column',transition:'margin-left .3s'}}>
           {/* topbar */}
-          <div style={{position:'sticky',top:0,zIndex:50,background:C.bg,borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 26px'}}>
+          <div style={{position:'sticky',top:0,zIndex:50,background:C.bg,borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px clamp(12px,3vw,26px)'}}>
             <div style={{display:'flex',alignItems:'center',gap:14}}>
               <button onClick={()=>setCollapsed(c=>!c)} style={{background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:20}}>
                 {collapsed?'☰':'✕'}
@@ -762,7 +762,7 @@ export default function AdminPage() {
             </div>
           </div>
           {/* content */}
-          <main key={page} className="adm-fade" style={{padding:'30px 26px',flex:1}}>
+          <main key={page} className="adm-fade" style={{padding:'clamp(16px,3vw,30px) clamp(12px,3vw,26px)',flex:1}}>
             {loading && page==='dashboard'
               ? <div style={{textAlign:'center',padding:80}}><Spinner size={36}/><p style={{color:C.muted,marginTop:16,fontSize:14}}>Loading data…</p></div>
               : PAGES[page]

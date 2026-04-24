@@ -170,7 +170,7 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
       {/* ═══ ADD / EDIT MODAL ═══ */}
       {modal && (
         <Modal title={modal==='add'?'New Membership Plan':'Edit Plan'} onClose={close} wide>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,20px)'}}>
             {/* Left */}
             <div>
               <FR label="Plan Name *"><input style={inp} value={form.label||''} onChange={e=>set('label',e.target.value)} placeholder="e.g. Monthly"/></FR>

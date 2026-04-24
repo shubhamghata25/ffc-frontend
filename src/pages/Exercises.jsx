@@ -71,7 +71,7 @@ export default function Exercises() {
         .ex-main{margin-left:210px;padding:84px 28px 60px}
         .ex-card{background:linear-gradient(145deg,#130f24,#1a1535);border-radius:18px;border:1px solid rgba(124,58,237,0.12);overflow:hidden;transition:transform .3s,box-shadow .3s,border-color .3s;animation:fadeUp .4s ease both}
         .ex-card:hover{transform:translateY(-5px);box-shadow:0 14px 40px rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.3)}
-        .filter-inp{padding:9px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,58,237,0.2);border-radius:10px;color:#f0eeff;font-family:'Poppins',sans-serif;font-size:13px;outline:none;width:200px}
+        .filter-inp{padding:9px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,58,237,0.2);border-radius:10px;color:#f0eeff;font-family:'Poppins',sans-serif;font-size:13px;outline:none;width:clamp(140px,40vw,200px)}
         .filter-inp:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.15)}
         @media(max-width:768px){
           .ex-sidebar{display:none}

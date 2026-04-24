@@ -112,7 +112,7 @@ export default function AdminExercises({ apiFetch, ImageUploader, Btn, Card, Mod
       {/* Add/Edit Modal */}
       {(modal==='add'||modal==='edit') && (
         <Modal title={modal==='add'?'Add Exercise':'Edit Exercise'} onClose={close} wide>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:20 }}>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,20px)' }}>
             {/* Left col */}
             <div>
               <FR label="Exercise Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)} placeholder="e.g. Bench Press"/></FR>

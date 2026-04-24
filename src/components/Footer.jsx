@@ -30,8 +30,8 @@ const Icons = {
 
 const SOCIAL = [
   { key:'Instagram', label:'Instagram',   url:'https://www.instagram.com/friends_fitness.club', color:'#E1306C' },
-  { key:'YouTube',   label:'YouTube',     url:'https://www.youtube.com/@nagendrasingh0002/shorts',    color:'#FF0000' },
-  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/profile.php?id=61550631891260',    color:'#1877F2' },
+  { key:'YouTube',   label:'YouTube',     url:'https://www.youtube.com/@friendsfitnessclub',    color:'#FF0000' },
+  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/friendsfitnessclub',    color:'#1877F2' },
   { key:'WhatsApp',  label:'WhatsApp',    url:'https://wa.me/918484805154',                     color:'#25D366' },
 ]
 
@@ -47,7 +47,7 @@ export default function Footer() {
       {/* decorative orb */}
       <div style={{ position:'absolute', bottom:-80, left:'10%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)', pointerEvents:'none' }}/>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:40, marginBottom:48, position:'relative' }}>
+      <div className='footer-grid' style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,190px),1fr))', gap:'clamp(24px,4vw,40px)', marginBottom:'clamp(32px,5vw,48px)', position:'relative' }}>
 
         {/* ── Brand ── */}
         <div>

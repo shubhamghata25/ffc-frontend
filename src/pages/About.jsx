@@ -59,7 +59,7 @@ export default function About() {
         </div>
 
         {/* ─── Story ─── */}
-        <div className="fade-up card-glass" style={{ maxWidth:860, margin:'0 auto 56px', padding:'36px 44px', textAlign:'left', borderRadius:24 }}>
+        <div className="fade-up card-glass" style={{ maxWidth:860, margin:'0 auto 56px', padding:'clamp(20px,4vw,36px) clamp(18px,4vw,44px)', textAlign:'left', borderRadius:24 }}>
           <p style={{ fontSize:17, lineHeight:2, color:'var(--text)', marginBottom:18 }}>
             <strong style={{ color:'#bb86fc' }}>Friends Fitness Club</strong>, founded on{' '}
             <strong style={{ color:'#9c59f7' }}>5th January 2023</strong>, is one of the fastest-growing
@@ -78,12 +78,12 @@ export default function About() {
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, letterSpacing:2, color:'var(--text)', marginBottom:28 }}>
           Our Training <span style={{ background:'linear-gradient(135deg,#bb86fc,#7c3aed)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Programs</span>
         </h2>
-        <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:12, marginBottom:60 }}>
-          {PROGRAMS.map(p => <div key={p} className="prog-tag">{p}</div>)}
+        <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:'clamp(8px,1.5vw,12px)', marginBottom:'clamp(36px,5vw,60px)', padding:'0 4px' }}>
+          {PROGRAMS.map(p => <div key={p} className="prog-tag" style={{fontSize:'clamp(12px,1.5vw,14px)',padding:'8px clamp(14px,2vw,22px)'}}>{p}</div>)}
         </div>
 
         {/* ─── Features ─── */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:22, maxWidth:960, margin:'0 auto 64px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap:'clamp(14px,2vw,22px)', maxWidth:960, margin:'0 auto 56px' }}>
           {FEATURES.map((f, i) => (
             <div key={f.title} className="feat-card" style={{ animationDelay:`${i*0.1}s` }}>
               <div style={{ width:64, height:64, borderRadius:'50%', background:'rgba(124,58,237,0.12)', border:'1px solid rgba(124,58,237,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, margin:'0 auto 18px', animation:'float 3s ease-in-out infinite' }}>
@@ -100,11 +100,11 @@ export default function About() {
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, letterSpacing:2, color:'var(--text)', marginBottom:36 }}>
           Meet Our <span style={{ background:'linear-gradient(135deg,#bb86fc,#7c3aed)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Trainers</span>
         </h2>
-        <div style={{ display:'flex', justifyContent:'center', flexWrap:'wrap', gap:26, marginBottom:56 }}>
+        <div className='trainer-grid' style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))', gap:'clamp(16px,2vw,26px)', maxWidth:900, margin:'0 auto 56px' }}>
           {trainers.filter(t => t.status !== 'Inactive').map(t => (
-            <div key={t.id||t.name} className="trainer-card" style={{ width:280 }}>
+            <div key={t.id||t.name} className="trainer-card">
               {t.photo
-                ? <img src={t.photo} alt={t.name} style={{ width:90, height:90, borderRadius:'50%', objectFit:'cover', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'block', boxShadow:'0 0 24px rgba(124,58,237,0.4)' }}/>
+                ? <img src={t.photo} alt={t.name} className='trainer-photo' style={{ width:90, height:90, borderRadius:'50%', objectFit:'cover', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'block', boxShadow:'0 0 24px rgba(124,58,237,0.4)' }}/>
                 : <div style={{ width:90, height:90, borderRadius:'50%', background:'rgba(124,58,237,0.12)', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:'0 0 24px rgba(124,58,237,0.3)' }}>🏋</div>
               }
               <h4 style={{ color:'#bb86fc', fontSize:18, marginBottom:5, fontWeight:700 }}>{t.name}</h4>

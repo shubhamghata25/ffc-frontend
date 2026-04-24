@@ -205,7 +205,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
 
       {(modal==='addProd'||modal==='editProd') && (
         <Modal title={modal==='addProd'?'Add Product':'Edit Product'} onClose={close} wide>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:20 }}>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,20px)' }}>
             <div>
               <FR label="Product Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)} placeholder="e.g. Whey Protein 1kg"/></FR>
               <FR label="Description">

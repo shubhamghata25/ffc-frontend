@@ -51,7 +51,7 @@ export default function Navbar() {
       <header style={{
         position:'fixed', top:0, left:0, width:'100%', zIndex:1000,
         display:'flex', justifyContent:'space-between', alignItems:'center',
-        padding: scrolled ? '12px 8%' : '18px 8%',
+        padding: scrolled ? 'clamp(10px,1.5vw,12px) clamp(4%,8vw,8%)' : 'clamp(14px,2vw,18px) clamp(4%,8vw,8%)',
         background: scrolled ? 'rgba(6,5,15,0.96)' : 'rgba(6,5,15,0.7)',
         backdropFilter:'blur(20px)',
         borderBottom:`1px solid ${scrolled ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.08)'}`,
@@ -61,7 +61,7 @@ export default function Navbar() {
         {/* Logo */}
         <NavLink to="/" style={{
           fontFamily:"'Bebas Neue',sans-serif",
-          fontSize: 26, letterSpacing: 3,
+          fontSize: 'clamp(18px,3.5vw,26px)', letterSpacing: 'clamp(1px,0.5vw,3px)',
           background:'linear-gradient(135deg,#bb86fc,#7c3aed)',
           WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
           backgroundClip:'text',
@@ -110,7 +110,7 @@ export default function Navbar() {
         {LINKS.map(l => (
           <NavLink key={l.to} to={l.to} end={l.to=='/'}
             className={({ isActive }) => `nav-link-item${isActive?' active-link':''}`}
-            style={{ padding:'14px 32px', fontSize:17, borderBottom:'none', borderLeft:'3px solid transparent' }}
+            style={{ padding:'14px 32px', fontSize:'clamp(15px,4vw,17px)', borderBottom:'none', borderLeft:'3px solid transparent', display:'block', textDecoration:'none' }}
             onClick={()=>setOpen(false)}>
             {l.label}
           </NavLink>

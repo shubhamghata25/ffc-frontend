@@ -67,7 +67,7 @@ export default function Contact() {
             </p>
           </div>
 
-          <div className="contact-wrap" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start' }}>
+          <div className="contact-wrap" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap:'clamp(24px,5vw,48px)', alignItems:'start' }}>
 
             {/* ─── LEFT: Info ─── */}
             <div className="fade-up">
@@ -82,16 +82,10 @@ export default function Contact() {
               ))}
 
               {/* Map embed */}
-              <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10 }}>
-                <iframe
-                  title="gym-map"
-                  src="https://www.google.com/maps?q=Friends+Fitness+Club+Nagpur&ll=21.139439,78.9511659&z=17&output=embed"
-                  width="100%"
-                  height="220"
-                  style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }}
-                  allowFullScreen
-                  loading="lazy"
-                />
+              <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10, display:'block' }}>
+                <iframe title="gym-map"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3721.1!2d79.08!3d21.13!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjHCsDA3JzQ4LjAiTiA3OcKwMDQnNDguMCJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
+                  width="100%" height="200" style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }} allowFullScreen loading="lazy"/>
               </div>
 
               <div style={{ display:'flex', gap:12, marginTop:20 }}>

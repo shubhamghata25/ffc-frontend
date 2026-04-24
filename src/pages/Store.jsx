@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { openRazorpay } from '../hooks/useRazorpay.jsx'
+import { openRazorpay, openPhonePeUPI, openWhatsAppOrder } from '../hooks/usePayment.jsx'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -66,24 +66,41 @@ export default function Store() {
     info(`${p.name} added to cart`)
   }
 
+  /* Which product to show payment modal for */
+  const [payProduct, setPayProduct] = useState(null)
+
   async function handleBuyNow(product){
-    setPaying(product.id)
+    setPayProduct(product)
+  }
+
+  async function doRazorpay(product){
+    setPayProduct(null); setPaying(product.id)
     info(`Opening payment for ${product.name}…`)
     await openRazorpay({
       amount:      product.price,
       name:        product.name,
       description: `${product.name} — ₹${product.price}`,
       meta:        { type:'store_product', itemId:product.id, itemName:product.name },
-      onSuccess: (resp)=>{
-        success(`🎉 Payment successful! Order confirmed.`)
-        setPaying(null)
-      },
-      onFailure: (msg)=>{
-        if(!msg.includes('cancelled')) error(msg)
-        setPaying(null)
-      },
+      onSuccess: (resp)=>{ success(`✅ Payment successful!`); setPaying(null) },
+      onFailure: (msg)=>{ if(!msg.includes('cancelled')) error(msg); setPaying(null) },
     })
     setPaying(null)
+  }
+
+  function doUPI(product){
+    setPayProduct(null)
+    info(/Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Opening UPI app…' : 'UPI best on mobile — trying…')
+    openPhonePeUPI({
+      amount: product.price,
+      name:   product.name,
+      onSuccess: ()=> success('✅ UPI payment initiated! Share screenshot on WhatsApp to confirm.'),
+      onFailure: (msg)=> error(msg),
+    })
+  }
+
+  function doWhatsApp(product){
+    setPayProduct(null)
+    openWhatsAppOrder({ productName: product.name, price: product.price })
   }
 
   async function handleCartCheckout(){
@@ -98,7 +115,7 @@ export default function Store() {
       description: desc,
       meta: { type:'store_cart', items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})) },
       onSuccess: (resp)=>{
-        success(`🎉 Order placed! Payment ID: ${resp.razorpay_payment_id}`)
+        success(`✅ Order placed! ID: ${resp.razorpay_payment_id}`)
         clear(); setShowCart(false); setPaying(null)
       },
       onFailure: (msg)=>{ if(!msg.includes('cancelled')) error(msg); setPaying(null) },
@@ -208,10 +225,10 @@ export default function Store() {
 
         {/* ── CATEGORIES ── */}
         {!loading&&view==='categories'&&(
-          <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:22,maxWidth:1100,margin:'0 auto'}}>
+          <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(12px,2vw,22px)',maxWidth:1100,margin:'0 auto'}}>
             {storeData.categories.map(cat=>(
               <div key={cat.id} className="s-card" onClick={()=>selectCat(cat)}>
-                <img src={cat.image||PH} alt={cat.name} style={{width:'100%',height:190,objectFit:'cover',display:'block'}}/>
+                <img src={cat.image||PH} alt={cat.name} className="cat-img" style={{width:'100%',height:190,objectFit:'cover',display:'block'}}/>
                 <div style={{padding:'18px 22px',textAlign:'center'}}>
                   <h3 style={{color:'#bb86fc',fontSize:19,marginBottom:4}}>{cat.name}</h3>
                   <p style={{color:'var(--muted)',fontSize:12}}>{storeData.products.filter(p=>p.categoryId===cat.id&&p.inStock).length} products</p>
@@ -227,10 +244,10 @@ export default function Store() {
           <>
             <button onClick={goBack} style={{background:'none',border:'none',color:'#9c59f7',cursor:'pointer',fontSize:15,fontWeight:600,display:'flex',alignItems:'center',gap:8,marginBottom:28}}>← Back</button>
             <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,letterSpacing:2,marginBottom:22}}>{activeCat?.name}</h2>
-            <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:18,maxWidth:1100,margin:'0 auto'}}>
+            <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,180px),1fr))',gap:'clamp(10px,2vw,18px)',maxWidth:1100,margin:'0 auto'}}>
               {subsForCat.map(sub=>(
                 <div key={sub.id} className="s-card" onClick={()=>selectSub(sub)}>
-                  <img src={sub.image||PH} alt={sub.name} style={{width:'100%',height:150,objectFit:'cover',display:'block'}}/>
+                  <img src={sub.image||PH} alt={sub.name} className="sub-img" style={{width:'100%',height:150,objectFit:'cover',display:'block'}}/>
                   <div style={{padding:'14px 18px',textAlign:'center'}}>
                     <h3 style={{color:'#bb86fc',fontSize:16}}>{sub.name}</h3>
                     <p style={{color:'var(--muted)',fontSize:12,marginTop:4}}>{storeData.products.filter(p=>p.subcategoryId===sub.id&&p.inStock).length} items</p>
@@ -252,11 +269,11 @@ export default function Store() {
                 style={{padding:'9px 14px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(124,58,237,0.25)',borderRadius:10,color:'var(--text)',fontFamily:'Poppins,sans-serif',fontSize:13,outline:'none',width:200}}/>
             </div>
 
-            <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:22,maxWidth:1100,margin:'0 auto'}}>
+            <div className="s-grid prod-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,220px),1fr))',gap:'clamp(12px,2vw,22px)',maxWidth:1100,margin:'0 auto'}}>
               {displayed.map((p,idx)=>(
                 <div key={p.id} className="s-card-static" style={{animationDelay:`${idx*0.04}s`}}>
                   <div style={{position:'relative'}}>
-                    <img src={p.image||PH} alt={p.name} style={{width:'100%',height:200,objectFit:'cover',display:'block'}}/>
+                    <img src={p.image||PH} alt={p.name} className="prod-img" style={{width:'100%',height:200,objectFit:'cover',display:'block'}}/>
                     {!p.inStock&&(
                       <div style={{position:'absolute',inset:0,background:'rgba(6,5,15,0.75)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <span style={{color:'rgba(240,238,255,0.6)',fontWeight:700,fontSize:14}}>Out of Stock</span>
@@ -272,11 +289,11 @@ export default function Store() {
                     </div>
                     {p.inStock&&(
                       <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                        <button className={`pay-btn ${paying===p.id?'pay-btn-success':flashAdd===p.id?'pay-btn-success':'pay-btn-primary'}`}
+                        <button className={`pay-btn ${paying===p.id?'pay-btn-success':'pay-btn-primary'}`}
                           onClick={()=>handleBuyNow(p)} disabled={!!paying}>
                           {paying===p.id
                             ? <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><span style={{width:13,height:13,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/> Processing…</span>
-                            : '🔒 Buy Now — Razorpay'
+                            : '🛍️ Buy Now'
                           }
                         </button>
                         <button className={`pay-btn pay-btn-ghost ${flashAdd===p.id?'pay-btn-success':''}`}
@@ -294,6 +311,36 @@ export default function Store() {
         )}
       </section>
 
+      {/* Payment method mini-modal for store products */}
+      {payProduct && (
+        <div onClick={()=>setPayProduct(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 0'}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:'20px 20px 0 0',padding:'clamp(20px,4vw,32px)',width:'100%',maxWidth:480}}>
+            <div style={{width:40,height:4,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0 auto 20px'}}/>
+            <div style={{textAlign:'center',marginBottom:20}}>
+              <div style={{fontWeight:700,fontSize:'clamp(14px,2vw,16px)',marginBottom:4}}>{payProduct.name}</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(28px,5vw,36px)',background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>₹{payProduct.price.toLocaleString()}</div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <button onClick={()=>doRazorpay(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                <span style={{fontSize:20}}>💳</span>
+                <div style={{textAlign:'left'}}><div>Card / Net Banking / UPI</div><div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>via Razorpay — GPay, PhonePe, all banks</div></div>
+                <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
+              </button>
+              <button onClick={()=>doUPI(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(99,102,241,0.08)',border:'1.5px solid rgba(99,102,241,0.25)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                <span style={{fontSize:20}}>📱</span>
+                <div style={{textAlign:'left'}}><div>PhonePe / UPI Direct</div><div style={{fontSize:11,color:'#818cf8',fontWeight:400}}>Opens UPI app directly on mobile</div></div>
+                <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
+              </button>
+              <button onClick={()=>doWhatsApp(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(37,211,102,0.08)',border:'1.5px solid rgba(37,211,102,0.2)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                <span style={{fontSize:20}}>💬</span>
+                <div style={{textAlign:'left'}}><div>WhatsApp Order</div><div style={{fontSize:11,color:'#4ade80',fontWeight:400}}>Chat to confirm &amp; pay manually</div></div>
+                <span style={{marginLeft:'auto',color:'#4ade80'}}>›</span>
+              </button>
+            </div>
+            <button onClick={()=>setPayProduct(null)} style={{width:'100%',marginTop:14,padding:'10px',background:'rgba(255,255,255,0.05)',border:'none',borderRadius:10,color:'#6b6490',cursor:'pointer',fontFamily:"'Poppins',sans-serif",fontSize:13}}>Cancel</button>
+          </div>
+        </div>
+      )}
       <ToastContainer toasts={toasts}/>
     </div>
   )
