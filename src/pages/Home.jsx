@@ -183,7 +183,7 @@ export default function Home() {
         <section style={{borderBottom:'1px solid rgba(124,58,237,0.2)',position:'relative',overflow:'hidden'}}>
           {offer.poster
             ? <div style={{position:'relative'}}>
-                <img src={offer.poster} alt={offer.title} style={{width:'100%',maxHeight:'clamp(220px,50vw,400px)',objectFit:'cover',display:'block'}}/>
+                <img src={offer.poster} alt={offer.title} style={{width:'100%',height:'clamp(240px,55vw,520px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
                 <div style={{position:'absolute',inset:0,background:'rgba(6,5,15,0.62)'}}/>
                 <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px 6%',textAlign:'center'}}>
                   <div className="badge-purple" style={{marginBottom:12,fontSize:11,letterSpacing:2}}>LIMITED TIME OFFER</div>
@@ -241,8 +241,8 @@ export default function Home() {
         <div className="accent-line"/>
         <h2 className="section-title">Shop Our <span>Products</span></h2>
         <p className="section-sub" style={{margin:'0 auto 28px',fontSize:'clamp(13px,2vw,16px)'}}>Premium supplements, equipment &amp; accessories at the best prices.</p>
-        <div style={{maxWidth:440,margin:'0 auto',borderRadius:20,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'var(--card)'}}>
-          <img src="https://images.unsplash.com/photo-1599058917765-a780eda07a3e?w=800" alt="Gym Supplements" style={{width:'100%',height:'clamp(180px,40vw,260px)',objectFit:'cover',display:'block'}}/>
+        <div style={{maxWidth:'min(640px,100%)',margin:'0 auto',borderRadius:20,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'var(--card)'}}>
+          <img src="https://images.unsplash.com/photo-1599058917765-a780eda07a3e?w=800" alt="Gym Supplements" style={{width:'100%',height:'clamp(200px,45vw,380px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
           <div style={{padding:'clamp(16px,3vw,28px)'}}>
             <Link to="/store" className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>Shop Now →</Link>
           </div>

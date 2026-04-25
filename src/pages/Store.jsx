@@ -228,7 +228,7 @@ export default function Store() {
           <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(12px,2vw,22px)',maxWidth:1100,margin:'0 auto'}}>
             {storeData.categories.map(cat=>(
               <div key={cat.id} className="s-card" onClick={()=>selectCat(cat)}>
-                <img src={cat.image||PH} alt={cat.name} style={{width:'100%',height:'clamp(130px,28vw,190px)',objectFit:'cover',display:'block'}}/>
+                <img src={cat.image||PH} alt={cat.name} style={{width:'100%',height:'clamp(140px,26vw,220px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
                 <div style={{padding:'18px 22px',textAlign:'center'}}>
                   <h3 style={{color:'#bb86fc',fontSize:19,marginBottom:4}}>{cat.name}</h3>
                   <p style={{color:'var(--muted)',fontSize:12}}>{storeData.products.filter(p=>p.categoryId===cat.id&&p.inStock).length} products</p>
@@ -247,7 +247,7 @@ export default function Store() {
             <div className="s-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,180px),1fr))',gap:'clamp(10px,2vw,18px)',maxWidth:1100,margin:'0 auto'}}>
               {subsForCat.map(sub=>(
                 <div key={sub.id} className="s-card" onClick={()=>selectSub(sub)}>
-                  <img src={sub.image||PH} alt={sub.name} style={{width:'100%',height:'clamp(110px,24vw,150px)',objectFit:'cover',display:'block'}}/>
+                  <img src={sub.image||PH} alt={sub.name} style={{width:'100%',height:'clamp(120px,22vw,170px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
                   <div style={{padding:'14px 18px',textAlign:'center'}}>
                     <h3 style={{color:'#bb86fc',fontSize:16}}>{sub.name}</h3>
                     <p style={{color:'var(--muted)',fontSize:12,marginTop:4}}>{storeData.products.filter(p=>p.subcategoryId===sub.id&&p.inStock).length} items</p>
@@ -273,7 +273,7 @@ export default function Store() {
               {displayed.map((p,idx)=>(
                 <div key={p.id} className="s-card-static" style={{animationDelay:`${idx*0.04}s`}}>
                   <div style={{position:'relative'}}>
-                    <img src={p.image||PH} alt={p.name} style={{width:'100%',height:'clamp(150px,32vw,200px)',objectFit:'cover',display:'block'}}/>
+                    <img src={p.image||PH} alt={p.name} style={{width:'100%',height:'clamp(160px,35vw,240px)',objectFit:'cover',objectPosition:'center top',display:'block'}}/>
                     {!p.inStock&&(
                       <div style={{position:'absolute',inset:0,background:'rgba(6,5,15,0.75)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <span style={{color:'rgba(240,238,255,0.6)',fontWeight:700,fontSize:14}}>Out of Stock</span>
