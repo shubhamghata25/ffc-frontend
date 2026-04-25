@@ -102,9 +102,9 @@ export default function About() {
         </h2>
         <div className='trainer-grid' style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))', gap:'clamp(16px,2vw,26px)', maxWidth:900, margin:'0 auto 56px' }}>
           {trainers.filter(t => t.status !== 'Inactive').map(t => (
-            <div key={t.id||t.name} className="trainer-card">
+            <div key={t.id||t.name} className="trainer-card" style={{padding:'clamp(20px,3vw,34px) clamp(16px,2.5vw,28px)'}}>
               {t.photo
-                ? <img src={t.photo} alt={t.name} className='trainer-photo' style={{ width:90, height:90, borderRadius:'50%', objectFit:'cover', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'block', boxShadow:'0 0 24px rgba(124,58,237,0.4)' }}/>
+                ? <img src={t.photo} alt={t.name} style={{ width:'clamp(72px,15vw,90px)', height:'clamp(72px,15vw,90px)', borderRadius:'50%', objectFit:'cover', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'block', boxShadow:'0 0 24px rgba(124,58,237,0.4)' }}/>
                 : <div style={{ width:90, height:90, borderRadius:'50%', background:'rgba(124,58,237,0.12)', border:'3px solid #7c3aed', margin:'0 auto 18px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:'0 0 24px rgba(124,58,237,0.3)' }}>🏋</div>
               }
               <h4 style={{ color:'#bb86fc', fontSize:18, marginBottom:5, fontWeight:700 }}>{t.name}</h4>

@@ -59,19 +59,38 @@ export default function Home() {
         .feat-card{transition:transform .3s,box-shadow .3s}
         .feat-card:hover{transform:translateY(-8px);box-shadow:0 16px 48px rgba(124,58,237,0.25)!important}
 
-        /* ── Hero video: mobile fix ── */
+        /* ── Hero video: full cover on all devices ── */
         .hero-video{
-          position:absolute;top:50%;left:50%;
+          position:absolute;
+          top:50%;
+          left:50%;
+          /* Centre then scale to cover — works on every browser */
           transform:translate(-50%,-50%);
-          min-width:100%;min-height:100%;
-          width:auto;height:auto;
+          -webkit-transform:translate(-50%,-50%);
+          /* At minimum fill the container in both axes */
+          min-width:100%;
+          min-height:100%;
+          /* Natural sizing — browser picks the axis that needs to grow */
+          width:auto;
+          height:auto;
           object-fit:cover;
           object-position:center center;
           z-index:1;
+          /* GPU layer — stops iOS Safari from compositing badly */
+          -webkit-backface-visibility:hidden;
+          backface-visibility:hidden;
+          will-change:transform;
         }
-        /* iOS Safari needs explicit size */
-        @supports (-webkit-touch-callout: none){
-          .hero-video{ width:100%;height:100%;object-fit:cover;top:0;left:0;transform:none; }
+        /* iOS Safari @supports override — translate trick breaks there */
+        @supports (-webkit-touch-callout:none){
+          .hero-video{
+            top:0; left:0;
+            width:100%;
+            height:100%;
+            min-width:unset; min-height:unset;
+            transform:none;
+            -webkit-transform:none;
+          }
         }
 
         /* ── Counter row: mobile ── */
@@ -100,9 +119,9 @@ export default function Home() {
       `}</style>
 
       {/* ─── HERO ─── */}
-      <section style={{position:'relative',height:'100svh',minHeight:500,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <section style={{position:'relative',height:'100vh',minHeight:'100svh',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
         {/* video — class hero-video fixes mobile sizing */}
-        <video autoPlay muted loop playsInline className="hero-video">
+        <video autoPlay muted loop playsInline className="hero-video" poster="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=1400&q=80">
           <source src="/gym-video.mp4" type="video/mp4"/>
         </video>
 

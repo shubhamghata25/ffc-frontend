@@ -139,7 +139,7 @@ export default function Exercises() {
                   <div style={{ padding:'0 0 14px' }}>
                     {playing===(ex.id||ex.name) && vid ? (
                       <iframe src={`https://www.youtube.com/embed/${vid}?autoplay=1`}
-                        style={{ width:'100%', height:195, border:'none', display:'block' }}
+                        style={{ width:'100%', height:'clamp(160px,35vw,195px)', border:'none', display:'block' }}
                         allow="autoplay; encrypted-media" allowFullScreen title={ex.name}/>
                     ) : (
                       <div onClick={()=>vid&&setPlaying(ex.id||ex.name)} style={{
