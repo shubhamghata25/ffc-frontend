@@ -84,7 +84,7 @@ export default function Contact() {
               {/* Map embed */}
               <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10, display:'block' }}>
                 <iframe title="gym-map"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3721.1!2d79.08!3d21.13!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjHCsDA3JzQ4LjAiTiA3OcKwMDQnNDguMCJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
+                  src="https://maps.google.com/maps?q=Friends%20Fitness%20Club%20Nagpur&output=embed"
                   width="100%" height="200" style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }} allowFullScreen loading="lazy"/>
               </div>
 
