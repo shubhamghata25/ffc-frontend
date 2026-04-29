@@ -6,23 +6,36 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 /* ─── Payment method modal ─── */
 function PayModal({ plan, onClose, onDone }) {
-  const [method, setMethod] = useState(null)   // null | 'razorpay' | 'upi'
+  const [step, setStep]   = useState('details')   // 'details' | 'method'
   const [paying, setPaying] = useState(false)
+  const [form, setForm]   = useState({ name:'', email:'', phone:'' })
   const { toasts, success, error, info } = useToast()
-
   const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent)
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const valid = form.name.trim().length > 1 && form.phone.replace(/\D/g,'').length >= 10
+
+  const inpStyle = {
+    width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.04)',
+    border:'1px solid rgba(124,58,237,0.35)', borderRadius:10, color:'#f0eeff',
+    fontFamily:"'Poppins',sans-serif", fontSize:14, outline:'none', boxSizing:'border-box',
+  }
 
   async function payRazorpay() {
     setPaying(true)
-    info('Opening payment…')
+    info('Opening payment gateway...')
     await openRazorpay({
       amount:      plan.price,
       name:        `${plan.label} Membership`,
-      description: `FFC ${plan.label} — ₹${plan.price}`,
-      meta:        { type:'membership', itemId:plan.id, itemName:plan.label },
-      onSuccess: (resp) => {
-        success(`✅ Payment successful! ID: ${resp.razorpay_payment_id}`)
-        setTimeout(() => { setPaying(false); onDone?.() }, 1500)
+      description: `FFC ${plan.label} - Rs.${plan.price}`,
+      prefill:     { name: form.name, email: form.email, contact: form.phone },
+      meta: {
+        type:'membership', itemId:plan.id, itemName:plan.label,
+        memberName:form.name, memberEmail:form.email, memberPhone:form.phone,
+        planLabel:plan.label, planPeriod:plan.period, planPrice:plan.price,
+      },
+      onSuccess: () => {
+        success('Payment successful! Check your email for confirmation and QR code.')
+        setTimeout(() => { setPaying(false); onDone?.() }, 2500)
       },
       onFailure: (msg) => {
         if (!msg.includes('cancelled')) error(msg)
@@ -34,12 +47,12 @@ function PayModal({ plan, onClose, onDone }) {
 
   function payUPI() {
     setPaying(true)
-    info(isMobile ? 'Opening UPI app…' : 'UPI is best on mobile. Opening WhatsApp instead…')
+    info(isMobile ? 'Opening UPI app...' : 'UPI is best on mobile.')
     openPhonePeUPI({
       amount: plan.price,
       name:   `${plan.label} Membership`,
       onSuccess: () => {
-        success('✅ UPI payment initiated! Share screenshot on WhatsApp to confirm.')
+        success('UPI payment initiated! Share screenshot on WhatsApp to confirm.')
         setPaying(false); onDone?.()
       },
       onFailure: (msg) => { error(msg); setPaying(false) },
@@ -48,57 +61,97 @@ function PayModal({ plan, onClose, onDone }) {
 
   return (
     <>
-      <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px' }}>
-        <div onClick={e=>e.stopPropagation()} style={{ background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'clamp(22px,4vw,36px)',width:'100%',maxWidth:420,position:'relative' }}>
+      <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:1000,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0' }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:'20px 20px 0 0',padding:'clamp(20px,4vw,32px)',width:'100%',maxWidth:440,position:'relative',maxHeight:'92vh',overflowY:'auto' }}>
 
-          {/* Close */}
-          <button onClick={onClose} style={{ position:'absolute',top:14,right:16,background:'none',border:'none',color:'#6b6490',fontSize:22,cursor:'pointer',lineHeight:1 }}>✕</button>
+          <button onClick={onClose} style={{ position:'absolute',top:14,right:16,background:'none',border:'none',color:'#6b6490',fontSize:22,cursor:'pointer' }}>✕</button>
 
           {/* Plan summary */}
-          <div style={{ textAlign:'center',marginBottom:26 }}>
-            <div style={{ fontSize:12,color:'#9c59f7',fontWeight:700,letterSpacing:2,marginBottom:6,textTransform:'uppercase' }}>Complete Your Purchase</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:1 }}>{plan.label} Membership</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:48,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1 }}>₹{plan.price.toLocaleString()}</div>
+          <div style={{ textAlign:'center',marginBottom:20 }}>
+            <div style={{ fontSize:11,color:'#9c59f7',fontWeight:700,letterSpacing:2,marginBottom:6,textTransform:'uppercase' }}>
+              {step==='details' ? 'Step 1 of 2 — Your Details' : 'Step 2 of 2 — Payment'}
+            </div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:26,letterSpacing:1 }}>{plan.label} Membership</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:44,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1 }}>
+              Rs.{plan.price.toLocaleString()}
+            </div>
             <div style={{ color:'#6b6490',fontSize:12,marginTop:2 }}>per {plan.period}</div>
           </div>
 
-          {/* Choose payment method */}
-          <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
-
-            {/* Razorpay — cards, UPI, netbanking */}
-            <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',transition:'all .2s',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
-              <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
+          {/* STEP 1: Member details */}
+          {step === 'details' && (
+            <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
               <div>
-                <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Card / Net Banking / UPI</div>
-                <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — All major banks, GPay, PhonePe, Paytm UPI</div>
+                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:5 }}>Full Name *</label>
+                <input value={form.name} onChange={e=>setF('name',e.target.value)}
+                  placeholder="e.g. Rahul Sharma" style={inpStyle}/>
               </div>
-              <div style={{ marginLeft:'auto',color:'#9c59f7',fontSize:18 }}>›</div>
-            </button>
-
-            {/* PhonePe direct UPI */}
-            <button onClick={payUPI} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.08)',border:'2px solid rgba(99,102,241,0.25)',borderRadius:14,cursor:paying?'not-allowed':'pointer',transition:'all .2s',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
-              <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#5c35cc,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>📱</div>
               <div>
-                <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>UPI / PhonePe Direct</div>
-                <div style={{ fontSize:11,color:'#818cf8' }}>{isMobile ? 'Opens UPI app directly on your phone' : 'Best on mobile — opens PhonePe/GPay'}</div>
+                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:5 }}>Phone Number *</label>
+                <input value={form.phone} onChange={e=>setF('phone',e.target.value)}
+                  placeholder="10-digit mobile number" type="tel" style={inpStyle}/>
               </div>
-              <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
-            </button>
-
-            {/* WhatsApp confirm */}
-            <button onClick={()=>{ const m=`Hello! I want to join FFC ${plan.label} plan for ₹${plan.price}. Please confirm my enrollment.`; window.open(`https://wa.me/918484805154?text=${encodeURIComponent(m)}`,'_blank'); onClose() }}
-              disabled={paying}
-              style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(37,211,102,0.08)',border:'2px solid rgba(37,211,102,0.2)',borderRadius:14,cursor:'pointer',transition:'all .2s',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
-              <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💬</div>
               <div>
-                <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>WhatsApp Enquiry</div>
-                <div style={{ fontSize:11,color:'#4ade80' }}>Chat with us to confirm &amp; pay manually</div>
+                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:5 }}>Email Address</label>
+                <input value={form.email} onChange={e=>setF('email',e.target.value)}
+                  placeholder="your@email.com" type="email" style={inpStyle}/>
+                <p style={{ fontSize:11,color:'#7c3aed',marginTop:6,lineHeight:1.5 }}>
+                  Your QR attendance code + confirmation will be sent here
+                </p>
               </div>
-              <div style={{ marginLeft:'auto',color:'#4ade80',fontSize:18 }}>›</div>
-            </button>
-          </div>
+              <button onClick={() => setStep('method')} disabled={!valid}
+                style={{ padding:'14px',border:'none',borderRadius:40,background:valid?'linear-gradient(135deg,#7c3aed,#9c59f7)':'rgba(124,58,237,0.2)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:valid?'pointer':'not-allowed',marginTop:4 }}>
+                Continue to Payment →
+              </button>
+              {!valid && <p style={{ textAlign:'center',fontSize:11,color:'#6b6490' }}>Name and phone number are required</p>}
+            </div>
+          )}
 
-          <p style={{ textAlign:'center',marginTop:18,fontSize:11,color:'#4b4570' }}>🔒 All payments are 100% secure &amp; encrypted</p>
+          {/* STEP 2: Payment methods */}
+          {step === 'method' && (
+            <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
+              <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#4ade80',marginBottom:4 }}>
+                Paying as: <strong>{form.name}</strong> · {form.phone}
+              </div>
+
+              <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
+                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
+                <div>
+                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Card / Net Banking / UPI</div>
+                  <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — GPay, PhonePe, Paytm, all cards</div>
+                </div>
+                <div style={{ marginLeft:'auto',color:'#9c59f7',fontSize:18 }}>›</div>
+              </button>
+
+              <button onClick={payUPI} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(99,102,241,0.08)',border:'2px solid rgba(99,102,241,0.25)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
+                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#5c35cc,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>📱</div>
+                <div>
+                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>UPI / PhonePe Direct</div>
+                  <div style={{ fontSize:11,color:'#818cf8' }}>{isMobile ? 'Opens UPI app directly' : 'Best on mobile'}</div>
+                </div>
+                <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
+              </button>
+
+              <button onClick={()=>{ const m=`Hello! I want to join FFC ${plan.label} plan for Rs.${plan.price}. Name: ${form.name}, Phone: ${form.phone}`; window.open(`https://wa.me/918484805154?text=${encodeURIComponent(m)}`,'_blank'); onClose() }}
+                disabled={paying}
+                style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(37,211,102,0.08)',border:'2px solid rgba(37,211,102,0.2)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
+                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💬</div>
+                <div>
+                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>WhatsApp Enquiry</div>
+                  <div style={{ fontSize:11,color:'#4ade80' }}>Chat with us to confirm and pay manually</div>
+                </div>
+                <div style={{ marginLeft:'auto',color:'#4ade80',fontSize:18 }}>›</div>
+              </button>
+
+              <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
+                ← Edit details
+              </button>
+            </div>
+          )}
+
+          <p style={{ textAlign:'center',marginTop:18,fontSize:11,color:'#4b4570' }}>
+            All payments are 100% secure and encrypted
+          </p>
         </div>
       </div>
       <ToastContainer toasts={toasts}/>
