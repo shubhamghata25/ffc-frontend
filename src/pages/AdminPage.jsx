@@ -10,7 +10,6 @@ const ADMIN_KEY  = import.meta.env.VITE_ADMIN_SECRET || 'ffc-admin-secret-2026'
 const PLANS      = ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999']
 const uid        = () => Math.random().toString(36).slice(2,9)
 
-/* ── API helper ── */
 async function apiFetch(path, method='GET', body=null) {
   const opts = { method, headers:{'Content-Type':'application/json','x-admin-key':ADMIN_KEY} }
   if (body) opts.body = JSON.stringify(body)
@@ -19,7 +18,6 @@ async function apiFetch(path, method='GET', body=null) {
   return res.json()
 }
 
-/* ── Convert file to base64 string ── */
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -29,7 +27,6 @@ function fileToBase64(file) {
   })
 }
 
-/* ── Resize image client-side before uploading (saves bandwidth) ── */
 function resizeImage(dataUrl, maxW=800, quality=0.78) {
   return new Promise(resolve => {
     const img = new Image()
@@ -45,9 +42,6 @@ function resizeImage(dataUrl, maxW=800, quality=0.78) {
   })
 }
 
-/* ── Upload image to Cloudinary via backend ──
-   Returns permanent Cloudinary URL.
-   Falls back gracefully if backend returns base64. */
 async function uploadImageToCloud(base64, folder='ffc') {
   const res = await fetch(`${API}/api/upload`, {
     method: 'POST',
@@ -59,10 +53,9 @@ async function uploadImageToCloud(base64, folder='ffc') {
     throw new Error(err.error || 'Image upload failed')
   }
   const data = await res.json()
-  return data.url  // permanent Cloudinary URL
+  return data.url
 }
 
-/* ─── COLOURS ─────────────────────────────────────────────── */
 const C = {
   bg:'#06050f', surface:'#0d0b1a', card:'#130f24', border:'#2a2347',
   accent:'#7c3aed', accentL:'#9c59f7', accentG:'rgba(124,58,237,0.12)',
@@ -76,44 +69,50 @@ const CSS = `
   .adm-fade { animation:fadeUp .4s ease both }
   .adm-row:hover td { background:rgba(255,255,255,0.025) }
   .adm-nav { display:flex;align-items:center;gap:11px;padding:13px 22px;cursor:pointer;transition:all .2s;font-size:14px;font-weight:500;border-left:3px solid transparent }
-  .adm-nav:hover { color:${C.accent};background:${C.accentG} }
-
-  /* image upload drop zone */
-  .img-drop {
-    border:2px dashed ${C.border};border-radius:12px;
-    padding:28px 20px;text-align:center;cursor:pointer;
-    transition:border-color .2s,background .2s;
-    background:rgba(255,255,255,0.02);
-  }
-  .img-drop:hover,.img-drop.drag { border-color:${C.accent};background:${C.accentG} }
+  .adm-nav:hover { color:#7c3aed;background:rgba(124,58,237,0.12) }
+  .img-drop { border:2px dashed #2a2347;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:rgba(255,255,255,0.02) }
+  .img-drop:hover,.img-drop.drag { border-color:#7c3aed;background:rgba(124,58,237,0.12) }
   .img-drop input[type=file]{ display:none }
-
-  @media(max-width:768px){ .adm-sidebar{display:none!important} .adm-main{margin-left:0!important} }
+  .adm-sidebar-fixed { transition: transform 0.28s cubic-bezier(.4,0,.2,1); }
+  .member-card { display:none; }
+  @media(max-width:768px){
+    .adm-sidebar-fixed { transform: translateX(-100%); position:fixed; z-index:200; }
+    .adm-sidebar-fixed.open { transform: translateX(0); box-shadow: 4px 0 40px rgba(0,0,0,0.7); }
+    .adm-main { margin-left:0 !important; }
+    .adm-table-desktop { display:none !important; }
+    .member-card { display:block; }
+    .hide-mobile { display:none !important; }
+    .adm-hamburger { display:flex !important; }
+    .adm-modal-inner { border-radius:20px 20px 0 0 !important; margin-bottom:0 !important; }
+  }
+  @media(min-width:769px){
+    .adm-overlay-bg { display:none !important; }
+    .adm-hamburger { display:none !important; }
+  }
 `
 
-/* ─── SMALL COMPONENTS ────────────────────────────────────── */
 const Btn = ({ children, onClick, variant='primary', size='md', disabled=false, style:s={} }) => {
-  const base = { display:'inline-flex',alignItems:'center',gap:6,cursor:disabled?'not-allowed':'pointer',border:'none',borderRadius:30,fontFamily:"'Poppins',sans-serif",fontWeight:600,transition:'all .2s',whiteSpace:'nowrap',opacity:disabled?0.6:1,padding:size==='sm'?'7px 15px':'10px 22px',fontSize:size==='sm'?12:14 }
-  const V = { primary:{background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',boxShadow:'0 4px 16px rgba(124,58,237,0.35)'}, ghost:{background:'transparent',color:'#bb86fc',border:'1px solid rgba(124,58,237,0.5)'}, danger:{background:C.danger,color:'#fff'}, muted:{background:'rgba(255,255,255,0.07)',color:C.text}, success:{background:C.success,color:'#fff'} }
+  const base = { display:'inline-flex',alignItems:'center',gap:6,cursor:disabled?'not-allowed':'pointer',border:'none',borderRadius:30,fontFamily:"'Poppins',sans-serif",fontWeight:600,transition:'all .2s',whiteSpace:'nowrap',opacity:disabled?0.6:1,padding:size==='sm'?'7px 15px':'11px 22px',fontSize:size==='sm'?12:14,minHeight:size==='sm'?36:44 }
+  const V = { primary:{background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',boxShadow:'0 4px 16px rgba(124,58,237,0.35)'}, ghost:{background:'transparent',color:'#bb86fc',border:'1px solid rgba(124,58,237,0.5)'}, danger:{background:'#ef4444',color:'#fff'}, muted:{background:'rgba(255,255,255,0.07)',color:'#f0eeff'}, success:{background:'#22c55e',color:'#fff'} }
   return <button onClick={disabled?undefined:onClick} style={{...base,...V[variant],...s}}>{children}</button>
 }
 
 const Badge = ({ label, color }) => {
-  const M = { green:[C.success,'rgba(34,197,94,0.15)'], orange:[C.warn,'rgba(245,158,11,0.15)'], red:[C.danger,'rgba(239,68,68,0.15)'], accent:[C.accent,C.accentG] }
+  const M = { green:['#22c55e','rgba(34,197,94,0.15)'], orange:['#f59e0b','rgba(245,158,11,0.15)'], red:['#ef4444','rgba(239,68,68,0.15)'], accent:['#7c3aed','rgba(124,58,237,0.12)'] }
   const [fg,bg] = M[color]||M.accent
   return <span style={{display:'inline-block',padding:'3px 11px',borderRadius:20,fontSize:11,fontWeight:700,background:bg,color:fg}}>{label}</span>
 }
 
 const Card = ({ children, style:s={} }) => (
-  <div style={{background:C.card,borderRadius:16,border:`1px solid ${C.border}`,overflow:'hidden',...s}}>{children}</div>
+  <div style={{background:'#130f24',borderRadius:16,border:'1px solid #2a2347',overflow:'hidden',...s}}>{children}</div>
 )
 
 const Modal = ({ title, children, onClose, wide=false }) => (
-  <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20,overflowY:'auto'}}>
-    <div className="adm-fade" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:20,padding:32,width:'100%',maxWidth:wide?680:500,maxHeight:'92vh',overflowY:'auto',margin:'auto'}}>
+  <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0',overflowY:'auto'}}>
+    <div className="adm-fade adm-modal-inner" style={{background:'#130f24',border:'1px solid #2a2347',borderRadius:20,padding:'24px 20px',width:'100%',maxWidth:wide?680:500,maxHeight:'92vh',overflowY:'auto',marginTop:'auto'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-        <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:1,color:C.accent}}>{title}</h3>
-        <button onClick={onClose} style={{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}}>✕</button>
+        <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:1,color:'#7c3aed'}}>{title}</h3>
+        <button onClick={onClose} style={{background:'none',border:'none',color:'#6b6490',fontSize:22,cursor:'pointer',padding:'4px 8px',minWidth:44,minHeight:44,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
       </div>
       {children}
     </div>
@@ -122,182 +121,323 @@ const Modal = ({ title, children, onClose, wide=false }) => (
 
 const FR = ({ label, children }) => (
   <div style={{marginBottom:14}}>
-    <label style={{fontSize:12,color:C.muted,display:'block',marginBottom:5}}>{label}</label>
+    <label style={{fontSize:12,color:'#6b6490',display:'block',marginBottom:5}}>{label}</label>
     {children}
   </div>
 )
 
-const inp = {width:'100%',padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:10,color:C.text,fontFamily:"'Poppins',sans-serif",fontSize:13,outline:'none',transition:'border-color .2s'}
-const Spinner = ({size=16}) => <span style={{width:size,height:size,border:'2px solid rgba(255,255,255,0.2)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
+const inp = {width:'100%',padding:'12px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid #2a2347',borderRadius:10,color:'#f0eeff',fontFamily:"'Poppins',sans-serif",fontSize:14,outline:'none',transition:'border-color .2s',boxSizing:'border-box'}
+const Spinner = ({size=16}) => <span style={{width:size,height:size,border:'2px solid rgba(255,255,255,0.2)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block',flexShrink:0}}/>
 
 const Table = ({ heads, children, empty }) => (
-  <div className='adm-table-scroll' style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-    <table style={{width:'100%',borderCollapse:'collapse'}}>
-      <thead><tr>{heads.map(h=><th key={h} style={{padding:'12px 16px',fontSize:11,textTransform:'uppercase',letterSpacing:.08,color:C.muted,borderBottom:`1px solid ${C.border}`,textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead>
+  <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+    <table style={{width:'100%',borderCollapse:'collapse',minWidth:500}}>
+      <thead><tr>{heads.map(h=><th key={h} style={{padding:'12px 16px',fontSize:11,textTransform:'uppercase',letterSpacing:.08,color:'#6b6490',borderBottom:'1px solid #2a2347',textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead>
       <tbody>{children}</tbody>
     </table>
-    {empty && <p style={{textAlign:'center',color:C.muted,padding:40,fontSize:14}}>{empty}</p>}
+    {empty && <p style={{textAlign:'center',color:'#6b6490',padding:40,fontSize:14}}>{empty}</p>}
   </div>
 )
-const Td = ({children,style:s={}}) => <td className="adm-row" style={{padding:'13px 16px',borderBottom:`1px solid ${C.border}`,fontSize:14,verticalAlign:'middle',...s}}>{children}</td>
+const Td = ({children,style:s={}}) => <td className="adm-row" style={{padding:'13px 16px',borderBottom:'1px solid #2a2347',fontSize:14,verticalAlign:'middle',...s}}>{children}</td>
 
-/* ── Toast notification ── */
 function Toast({ msg, type }) {
   if (!msg) return null
   return (
-    <div style={{position:'fixed',bottom:24,right:24,zIndex:99999,background:type==='ok'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)',border:`1px solid ${type==='ok'?C.success:C.danger}`,color:type==='ok'?C.success:C.danger,borderRadius:10,padding:'12px 20px',fontSize:14,fontWeight:600,animation:'fadeUp .3s ease',maxWidth:340}}>
+    <div style={{position:'fixed',bottom:24,right:24,zIndex:99999,background:type==='ok'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)',border:`1px solid ${type==='ok'?'#22c55e':'#ef4444'}`,color:type==='ok'?'#22c55e':'#ef4444',borderRadius:10,padding:'12px 20px',fontSize:14,fontWeight:600,animation:'fadeUp .3s ease',maxWidth:340}}>
       {type==='ok'?'✅':'❌'} {msg}
     </div>
   )
 }
 
-/* ════════════════════════════════════════════
-   IMAGE UPLOADER COMPONENT
-   Used in Offers (poster) and Trainers (photo)
-════════════════════════════════════════════ */
 function ImageUploader({ value, onChange, label='Upload Image', hint='', maxW=800, aspect='wide' }) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [drag, setDrag] = useState(false)
-
   const [uploadError, setUploadError] = useState('')
 
   const processFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return
     if (file.size > 10 * 1024 * 1024) { setUploadError('Image must be under 10MB'); return }
-    setUploading(true)
-    setUploadError('')
+    setUploading(true); setUploadError('')
     try {
-      /* 1. Resize locally to reduce upload size */
       const base64 = await fileToBase64(file)
       const resized = await resizeImage(base64, maxW, aspect==='square' ? 0.8 : 0.78)
-      /* 2. Upload to Cloudinary via backend — returns permanent URL */
       const cloudUrl = await uploadImageToCloud(resized, 'ffc')
       onChange(cloudUrl)
-    } catch (e) {
-      console.error('Image upload error:', e)
-      setUploadError(e.message || 'Upload failed. Try again.')
-    }
+    } catch (e) { setUploadError(e.message || 'Upload failed. Try again.') }
     setUploading(false)
   }
 
   return (
     <div style={{marginBottom:16}}>
-      <label style={{fontSize:12,color:C.muted,display:'block',marginBottom:8}}>{label}</label>
-
-      {/* Preview */}
+      <label style={{fontSize:12,color:'#6b6490',display:'block',marginBottom:8}}>{label}</label>
       {value && (
         <div style={{position:'relative',marginBottom:10,display:'inline-block'}}>
-          <img src={value} alt="preview" style={{
-            width: aspect==='square' ? 100 : '100%',
-            height: aspect==='square' ? 100 : 180,
-            objectFit:'cover',
-            borderRadius: aspect==='square' ? '50%' : 12,
-            display:'block',
-            border:`2px solid ${C.accent}`,
-            maxWidth: aspect==='square' ? 100 : '100%',
-          }}/>
-          <button onClick={()=>onChange('')} style={{position:'absolute',top:-8,right:-8,width:24,height:24,borderRadius:'50%',background:C.danger,border:'none',color:'#fff',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+          <img src={value} alt="preview" style={{width:aspect==='square'?100:'100%',height:aspect==='square'?100:180,objectFit:'cover',borderRadius:aspect==='square'?'50%':12,display:'block',border:'2px solid #7c3aed',maxWidth:aspect==='square'?100:'100%'}}/>
+          <button onClick={()=>onChange('')} style={{position:'absolute',top:-8,right:-8,width:24,height:24,borderRadius:'50%',background:'#ef4444',border:'none',color:'#fff',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
         </div>
       )}
-
-      {/* Drop zone */}
-      <div
-        className={`img-drop${drag?' drag':''}`}
-        onClick={()=>inputRef.current?.click()}
-        onDragOver={e=>{e.preventDefault();setDrag(true)}}
-        onDragLeave={()=>setDrag(false)}
-        onDrop={e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0])}}
-      >
+      <div className={`img-drop${drag?' drag':''}`} onClick={()=>inputRef.current?.click()} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0])}}>
         <input ref={inputRef} type="file" accept="image/*" onChange={e=>processFile(e.target.files[0])}/>
-        {uploading
-          ? <><Spinner size={24}/><p style={{color:C.muted,fontSize:13,marginTop:8}}>Uploading to cloud…</p></>
-          : <>
-              <div style={{fontSize:32,marginBottom:8}}>📸</div>
-              <p style={{color:C.muted,fontSize:13,marginBottom:4}}>{value ? 'Click or drop to replace' : 'Click or drop image here'}</p>
-              {hint && <p style={{color:'#555',fontSize:12}}>{hint}</p>}
-            </>
-        }
-        {uploadError && <p style={{color:C.danger,fontSize:12,marginTop:6}}>⚠ {uploadError}</p>}
-        {value && value.startsWith('https://res.cloudinary.com') && (
-          <p style={{color:C.success,fontSize:11,marginTop:6}}>✓ Stored permanently on Cloudinary</p>
-        )}
+        {uploading ? <><Spinner size={24}/><p style={{color:'#6b6490',fontSize:13,marginTop:8}}>Uploading…</p></> : <><div style={{fontSize:32,marginBottom:8}}>📸</div><p style={{color:'#6b6490',fontSize:13,marginBottom:4}}>{value?'Click or drop to replace':'Click or drop image here'}</p>{hint&&<p style={{color:'#555',fontSize:12}}>{hint}</p>}</>}
+        {uploadError&&<p style={{color:'#ef4444',fontSize:12,marginTop:6}}>⚠ {uploadError}</p>}
+        {value&&value.startsWith('https://res.cloudinary.com')&&<p style={{color:'#22c55e',fontSize:11,marginTop:6}}>✓ Stored on Cloudinary</p>}
       </div>
     </div>
   )
 }
 
-/* ════════════════════════════════════════════
-   LOGIN
-════════════════════════════════════════════ */
+/* ══ TASK 2: QR CODE DISPLAY ══ */
+function QRCodeDisplay({ member }) {
+  const canvasRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  const [err, setErr]     = useState(false)
+  const payload = JSON.stringify({ id: member.id, gym: 'FFC' })
+
+  useEffect(() => {
+    import('qrcode').then(QRCode => {
+      if (canvasRef.current) {
+        QRCode.toCanvas(canvasRef.current, payload, {
+          width:200, margin:2,
+          color:{ dark:'#ffffff', light:'#130f24' },
+        }, e => { if (!e) setReady(true) })
+      }
+    }).catch(() => setErr(true))
+  }, [payload])
+
+  const download = () => {
+    if (!canvasRef.current) return
+    const a = document.createElement('a')
+    a.href = canvasRef.current.toDataURL('image/png')
+    a.download = `QR_${member.name?.replace(/\s+/g,'_')}.png`
+    a.click()
+  }
+
+  return (
+    <div style={{textAlign:'center',padding:16}}>
+      {err
+        ? <div style={{background:'rgba(245,158,11,0.1)',border:'1px solid #f59e0b',borderRadius:12,padding:20}}>
+            <p style={{color:'#f59e0b',fontSize:13,marginBottom:8}}>⚠ Install the qrcode package:</p>
+            <code style={{background:'rgba(255,255,255,0.05)',padding:'6px 12px',borderRadius:8,fontSize:12,display:'block'}}>npm install qrcode</code>
+          </div>
+        : <>
+            <canvas ref={canvasRef} style={{borderRadius:12,display:'block',margin:'0 auto',border:'2px solid #7c3aed'}}/>
+            {ready && <>
+              <p style={{fontSize:12,color:'#6b6490',margin:'10px 0 6px'}}>Scan once per day to mark attendance</p>
+              <Btn size="sm" onClick={download}>⬇ Download PNG</Btn>
+            </>}
+            {!ready && !err && <p style={{color:'#6b6490',fontSize:13,marginTop:10}}>Generating QR…</p>}
+          </>
+      }
+    </div>
+  )
+}
+
+/* ══ TASK 2: QR SCANNER ══ */
+function QRScanner({ onSuccess }) {
+  const videoRef  = useRef(null)
+  const canvasRef = useRef(null)
+  const rafRef    = useRef(null)
+  const streamRef = useRef(null)
+  const [state, setState] = useState('idle')
+  const [msg, setMsg]     = useState('')
+  const [memberName, setMemberName] = useState('')
+
+  const stopAll = () => {
+    cancelAnimationFrame(rafRef.current)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+  }
+
+  useEffect(() => {
+    let jsQR
+    import('jsqr').then(m => {
+      jsQR = m.default
+      navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } })
+        .then(stream => {
+          streamRef.current = stream
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream
+            videoRef.current.play().then(() => { setState('scanning'); tick(jsQR) })
+          }
+        })
+        .catch(() => { setState('error'); setMsg('Camera access denied. Please allow camera permission.') })
+    }).catch(() => { setState('error'); setMsg('Install jsqr: npm install jsqr') })
+    return stopAll
+  }, [])
+
+  const tick = (jsQR) => {
+    const v = videoRef.current, c = canvasRef.current
+    if (!v || !c || v.readyState !== v.HAVE_ENOUGH_DATA) {
+      rafRef.current = requestAnimationFrame(() => tick(jsQR)); return
+    }
+    c.width = v.videoWidth; c.height = v.videoHeight
+    const ctx = c.getContext('2d')
+    ctx.drawImage(v, 0, 0)
+    const img = ctx.getImageData(0, 0, c.width, c.height)
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts:'dontInvert' })
+    if (code) { stopAll(); handleScan(code.data) }
+    else rafRef.current = requestAnimationFrame(() => tick(jsQR))
+  }
+
+  const handleScan = async (raw) => {
+    let payload
+    try { payload = JSON.parse(raw) } catch { setState('error'); setMsg('Invalid QR code. Not a FFC QR.'); return }
+    if (!payload.id) { setState('error'); setMsg('QR does not contain a valid member ID.'); return }
+    setState('loading'); setMsg('Verifying membership…')
+    try {
+      const data = await apiFetch('/api/admin/attendance/scan', 'POST', { memberId: payload.id })
+      if (data.success) {
+        setState('ok'); setMemberName(data.memberName||'Member'); setMsg(data.message||'Attendance marked!')
+        onSuccess?.()
+      } else if (data.code === 'ALREADY') {
+        setState('already'); setMemberName(data.memberName||'Member')
+      } else {
+        setState('error'); setMsg(data.message||'Scan rejected.')
+      }
+    } catch { setState('error'); setMsg('Server error. Check backend connection.') }
+  }
+
+  const reset = () => window.location.reload()
+
+  return (
+    <div style={{maxWidth:320,margin:'0 auto'}}>
+      <canvas ref={canvasRef} style={{display:'none'}}/>
+      {(state==='idle'||state==='scanning') && (
+        <div style={{borderRadius:14,overflow:'hidden',border:'2px solid #7c3aed',position:'relative',background:'#000',minHeight:220}}>
+          <video ref={videoRef} playsInline muted style={{width:'100%',display:'block'}}/>
+          {state==='scanning'&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+            <div style={{width:160,height:160,border:'2px solid rgba(124,58,237,0.8)',borderRadius:10}}/>
+          </div>}
+        </div>
+      )}
+      {state==='scanning'&&<p style={{textAlign:'center',color:'#6b6490',fontSize:13,marginTop:10}}>📷 Point at member's QR code…</p>}
+      {state==='loading'&&<div style={{textAlign:'center',padding:40}}><Spinner size={32}/><p style={{color:'#6b6490',marginTop:12,fontSize:13}}>{msg}</p></div>}
+      {state==='ok'&&<div style={{background:'rgba(34,197,94,0.1)',border:'1px solid #22c55e',borderRadius:14,padding:28,textAlign:'center'}}>
+        <div style={{fontSize:44,marginBottom:8}}>✅</div>
+        <p style={{fontSize:17,fontWeight:700,color:'#22c55e',marginBottom:4}}>{memberName}</p>
+        <p style={{fontSize:13,color:'#6b6490',marginBottom:4}}>{msg}</p>
+        <p style={{fontSize:11,color:'#6b6490'}}>{new Date().toLocaleString('en-IN')}</p>
+        <Btn onClick={reset} style={{marginTop:16,width:'100%',justifyContent:'center'}}>Scan Next Member</Btn>
+      </div>}
+      {state==='already'&&<div style={{background:'rgba(245,158,11,0.1)',border:'1px solid #f59e0b',borderRadius:14,padding:28,textAlign:'center'}}>
+        <div style={{fontSize:44,marginBottom:8}}>⚠️</div>
+        <p style={{fontSize:17,fontWeight:700,color:'#f59e0b',marginBottom:4}}>{memberName}</p>
+        <p style={{fontSize:13,color:'#6b6490',marginBottom:16}}>Already checked in today.</p>
+        <Btn onClick={reset} style={{width:'100%',justifyContent:'center'}}>Scan Another</Btn>
+      </div>}
+      {state==='error'&&<div style={{background:'rgba(239,68,68,0.1)',border:'1px solid #ef4444',borderRadius:14,padding:28,textAlign:'center'}}>
+        <div style={{fontSize:44,marginBottom:8}}>❌</div>
+        <p style={{fontSize:13,color:'#ef4444',marginBottom:16}}>{msg}</p>
+        <Btn onClick={reset} style={{width:'100%',justifyContent:'center'}}>Try Again</Btn>
+      </div>}
+    </div>
+  )
+}
+
+/* ══ TASK 3: EXPIRY ALERTS ══ */
+function ExpiryAlerts({ onNavigate }) {
+  const [expiring, setExpiring] = useState([])
+  const [loading, setLoading]   = useState(true)
+
+  useEffect(() => {
+    apiFetch('/api/admin/members/expiring')
+      .then(d => setExpiring(d||[]))
+      .catch(()=>{})
+      .finally(()=>setLoading(false))
+  }, [])
+
+  if (loading || expiring.length === 0) return null
+
+  return (
+    <div className="adm-fade" style={{background:'rgba(245,158,11,0.07)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:14,marginBottom:24,overflow:'hidden'}}>
+      <div style={{padding:'12px 18px',borderBottom:'1px solid rgba(245,158,11,0.15)',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:18}}>🔔</span>
+          <span style={{fontWeight:700,fontSize:14,color:'#f59e0b'}}>Memberships Expiring Soon</span>
+          <span style={{background:'rgba(245,158,11,0.2)',color:'#f59e0b',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:700}}>{expiring.length}</span>
+        </div>
+        {onNavigate&&<button onClick={()=>onNavigate('members')} style={{background:'none',border:'1px solid rgba(245,158,11,0.35)',color:'#f59e0b',borderRadius:8,padding:'5px 12px',fontSize:12,cursor:'pointer',fontWeight:600}}>View All →</button>}
+      </div>
+      {expiring.map((m,i)=>{
+        const red = m.daysLeft<=3
+        return (
+          <div key={m.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 18px',borderBottom:i<expiring.length-1?'1px solid rgba(245,158,11,0.08)':'none',gap:12,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+              <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background:red?'#ef4444':'#f59e0b'}}/>
+              <div style={{minWidth:0}}>
+                <p style={{fontWeight:600,fontSize:14,marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name}</p>
+                <p style={{fontSize:12,color:'#6b6490'}}>{m.phone} · {m.plan?.split('–')[0].trim()}</p>
+              </div>
+            </div>
+            <span style={{background:red?'rgba(239,68,68,0.15)':'rgba(245,158,11,0.15)',color:red?'#ef4444':'#f59e0b',borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:700,flexShrink:0}}>
+              {m.daysLeft===0?'Expires Today!':`${m.daysLeft}d left`}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function LoginPage({ onLogin }) {
   const [u,setU]=useState(''); const [p,setP]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
   const handle = () => { setLoading(true); setErr(''); setTimeout(()=>{ if(u===ADMIN_USER&&p===ADMIN_PASS) onLogin(); else{setErr('Invalid credentials');setLoading(false)} },700) }
   return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:`radial-gradient(ellipse at 60% 40%,rgba(124,58,237,0.15) 0%,${C.bg} 65%)`}}>
-      <div className="adm-fade" style={{width:380,textAlign:'center'}}>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'radial-gradient(ellipse at 60% 40%,rgba(124,58,237,0.15) 0%,#06050f 65%)',padding:16}}>
+      <div className="adm-fade" style={{width:'100%',maxWidth:380,textAlign:'center'}}>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:52,letterSpacing:4,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'glow 2.5s infinite',marginBottom:4}}>FFC</div>
-        <div style={{fontSize:11,color:C.muted,letterSpacing:3,marginBottom:36}}>ADMIN PORTAL</div>
+        <div style={{fontSize:11,color:'#6b6490',letterSpacing:3,marginBottom:36}}>ADMIN PORTAL</div>
         <Card style={{padding:36}}>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,marginBottom:24}}>SIGN IN</div>
           <FR label="Username"><input style={inp} placeholder="admin" value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></FR>
           <FR label="Password"><input style={inp} type="password" placeholder="••••••••" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></FR>
-          {err && <p style={{color:C.danger,fontSize:12,marginBottom:12,textAlign:'left'}}>⚠ {err}</p>}
+          {err&&<p style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'left'}}>⚠ {err}</p>}
           <Btn onClick={handle} disabled={loading} style={{width:'100%',justifyContent:'center',marginTop:8}}>{loading?<Spinner/>:'Login →'}</Btn>
-          <p style={{fontSize:11,color:C.muted,marginTop:14}}>admin / gym@admin123</p>
+          <p style={{fontSize:11,color:'#6b6490',marginTop:14}}>admin / gym@admin123</p>
         </Card>
       </div>
     </div>
   )
 }
 
-/* ════════════════════════════════════════════
-   DASHBOARD
-════════════════════════════════════════════ */
-function Dashboard({ members, products, leads, offers }) {
-  const active = members.filter(m=>m.status==='Active').length
-  const unpaid = members.filter(m=>m.fee==='Unpaid').length
+function Dashboard({ members, products, leads, offers, onNavigate }) {
+  const active  = members.filter(m=>m.status==='Active').length
+  const unpaid  = members.filter(m=>m.fee==='Unpaid').length
   const revenue = members.filter(m=>m.fee==='Paid').reduce((s,m)=>{ const n=parseInt(m.plan.replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
   const liveOffer = offers.find(o=>o.status==='ON')
-
   const Stat = ({icon,label,value,color}) => (
     <Card className="adm-fade" style={{padding:'22px 24px',position:'relative',overflow:'hidden'}}>
       <div style={{position:'absolute',top:-6,right:-6,fontSize:60,opacity:.05}}>{icon}</div>
       <div style={{fontSize:24,marginBottom:7}}>{icon}</div>
-      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:40,color:color||C.accent,letterSpacing:1}}>{value}</div>
-      <div style={{fontSize:11,color:C.muted,marginTop:2,textTransform:'uppercase',letterSpacing:.05}}>{label}</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:40,color:color||'#7c3aed',letterSpacing:1}}>{value}</div>
+      <div style={{fontSize:11,color:'#6b6490',marginTop:2,textTransform:'uppercase',letterSpacing:.05}}>{label}</div>
     </Card>
   )
-
   return (
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:6}}>DASHBOARD</h2>
-      <p style={{color:C.muted,fontSize:14,marginBottom:24}}>Welcome back, Admin 👋 — {new Date().toDateString()}</p>
-
-      {liveOffer && (
-        <div style={{marginBottom:20,padding:'14px 18px',borderRadius:12,background:'rgba(124,58,237,0.1)',border:`1px solid ${C.accent}`,fontSize:14,display:'flex',alignItems:'center',gap:12}}>
-          {liveOffer.poster && <img src={liveOffer.poster} alt="" style={{width:48,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}}/>}
-          <div><strong style={{color:C.accent}}>🔴 LIVE on website:</strong> {liveOffer.title}</div>
-        </div>
-      )}
-
+      <p style={{color:'#6b6490',fontSize:14,marginBottom:24}}>Welcome back, Admin 👋 — {new Date().toDateString()}</p>
+      <ExpiryAlerts onNavigate={onNavigate}/>
+      {liveOffer&&<div style={{marginBottom:20,padding:'14px 18px',borderRadius:12,background:'rgba(124,58,237,0.1)',border:'1px solid #7c3aed',fontSize:14,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+        {liveOffer.poster&&<img src={liveOffer.poster} alt="" style={{width:48,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}}/>}
+        <div><strong style={{color:'#7c3aed'}}>🔴 LIVE on website:</strong> {liveOffer.title}</div>
+      </div>}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(155px,1fr))',gap:16,marginBottom:28}}>
-        <Stat icon="👥" label="Total Members"  value={members.length}/>
-        <Stat icon="✅" label="Active"          value={active} color={C.success}/>
-        <Stat icon="⚠️" label="Unpaid Fees"    value={unpaid} color={C.warn}/>
-        <Stat icon="💰" label="Est. Revenue"   value={`₹${(revenue/1000).toFixed(1)}k`}/>
-        <Stat icon="📬" label="Leads"          value={leads.length}/>
-        <Stat icon="🛒" label="Products"       value={products.length} color={C.muted}/>
+        <Stat icon="👥" label="Total Members" value={members.length}/>
+        <Stat icon="✅" label="Active"         value={active}  color="#22c55e"/>
+        <Stat icon="⚠️" label="Unpaid Fees"   value={unpaid}  color="#f59e0b"/>
+        <Stat icon="💰" label="Est. Revenue"  value={`₹${(revenue/1000).toFixed(1)}k`}/>
+        <Stat icon="📬" label="Leads"         value={leads.length}/>
+        <Stat icon="🛒" label="Products"      value={products.length} color="#6b6490"/>
       </div>
-
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:20}}>
         <Card>
-          <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:`1px solid ${C.border}`}}>Recent Members</div>
+          <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:'1px solid #2a2347'}}>Recent Members</div>
           <Table heads={['Name','Plan','Status','Fee']}>
             {members.slice(0,5).map(m=>(
               <tr key={m.id} className="adm-row">
-                <Td><div style={{fontWeight:500,fontSize:13}}>{m.name}</div><div style={{fontSize:11,color:C.muted}}>{m.phone}</div></Td>
-                <Td style={{fontSize:12,color:C.muted}}>{m.plan.split('–')[0].trim()}</Td>
+                <Td><div style={{fontWeight:500,fontSize:13}}>{m.name}</div><div style={{fontSize:11,color:'#6b6490'}}>{m.phone}</div></Td>
+                <Td style={{fontSize:12,color:'#6b6490'}}>{m.plan.split('–')[0].trim()}</Td>
                 <Td><Badge label={m.status} color={m.status==='Active'?'green':'red'}/></Td>
                 <Td><Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/></Td>
               </tr>
@@ -305,13 +445,13 @@ function Dashboard({ members, products, leads, offers }) {
           </Table>
         </Card>
         <Card>
-          <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:`1px solid ${C.border}`}}>Recent Leads</div>
+          <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:'1px solid #2a2347'}}>Recent Leads</div>
           <Table heads={['Name','Phone','Date']}>
             {leads.slice(0,5).map(l=>(
               <tr key={l.id} className="adm-row">
-                <Td><div style={{fontWeight:500,fontSize:13}}>{l.name}</div><div style={{fontSize:11,color:C.muted}}>{l.email}</div></Td>
+                <Td><div style={{fontWeight:500,fontSize:13}}>{l.name}</div><div style={{fontSize:11,color:'#6b6490'}}>{l.email}</div></Td>
                 <Td style={{fontSize:13}}>{l.phone}</Td>
-                <Td style={{fontSize:12,color:C.muted}}>{l.date}</Td>
+                <Td style={{fontSize:12,color:'#6b6490'}}>{l.date}</Td>
               </tr>
             ))}
           </Table>
@@ -321,12 +461,9 @@ function Dashboard({ members, products, leads, offers }) {
   )
 }
 
-/* ════════════════════════════════════════════
-   MEMBERS
-════════════════════════════════════════════ */
 function Members({ members, reload, toast }) {
-  const [modal,setModal]=useState(null); const [search,setSearch]=useState(''); const [saving,setSaving]=useState(false)
-  const blank={name:'',phone:'',plan:PLANS[0],joined:new Date().toISOString().slice(0,10),status:'Active',fee:'Unpaid'}
+  const [modal,setModal]=useState(null); const [search,setSearch]=useState(''); const [saving,setSaving]=useState(false); const [qrMember,setQrMember]=useState(null)
+  const blank={name:'',phone:'',plan:PLANS[0],joined:new Date().toISOString().slice(0,10),endDate:'',status:'Active',fee:'Unpaid'}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const filtered=members.filter(m=>m.name.toLowerCase().includes(search.toLowerCase())||m.phone.includes(search))
   const save=async()=>{
@@ -337,35 +474,60 @@ function Members({ members, reload, toast }) {
   const del=async id=>{if(!confirm('Delete this member?'))return; try{await apiFetch(`/api/admin/members/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:26,flexWrap:'wrap',gap:12}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>MEMBERS</h2>
-        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-          <input style={{...inp,width:230}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          <input style={{...inp,width:'min(220px,100%)'}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
           <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Member</Btn>
         </div>
       </div>
-      <Card>
+      <Card className="adm-table-desktop">
         <Table heads={['Name','Phone','Plan','Joined','Status','Fee','Actions']} empty={filtered.length===0?'No members found':''}>
           {filtered.map(m=>(
             <tr key={m.id} className="adm-row">
-              <Td style={{fontWeight:500}}>{m.name}</Td><Td style={{color:C.muted,fontSize:13}}>{m.phone}</Td>
-              <Td style={{fontSize:13}}>{m.plan.split('–')[0].trim()}</Td><Td style={{color:C.muted,fontSize:13}}>{m.joined}</Td>
+              <Td style={{fontWeight:500}}>{m.name}</Td><Td style={{color:'#6b6490',fontSize:13}}>{m.phone}</Td>
+              <Td style={{fontSize:13}}>{m.plan.split('–')[0].trim()}</Td><Td style={{color:'#6b6490',fontSize:13}}>{m.joined}</Td>
               <Td><Badge label={m.status} color={m.status==='Active'?'green':'red'}/></Td>
               <Td><Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/></Td>
-              <Td><div style={{display:'flex',gap:6}}>
+              <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}}>Edit</Btn>
+                <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>QR</Btn>
                 <Btn size="sm" variant="danger" onClick={()=>del(m.id)}>Del</Btn>
               </div></Td>
             </tr>
           ))}
         </Table>
       </Card>
+      <div className="member-card">
+        {filtered.length===0?<p style={{textAlign:'center',color:'#6b6490',padding:40}}>No members found</p>
+          :filtered.map(m=>(
+          <Card key={m.id} style={{marginBottom:12,padding:18}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,gap:8}}>
+              <div><p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{m.name}</p><p style={{fontSize:13,color:'#6b6490'}}>{m.phone}</p></div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
+                <Badge label={m.status} color={m.status==='Active'?'green':'red'}/>
+                <Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
+              <div><span style={{color:'#6b6490'}}>Plan: </span><span>{m.plan.split('–')[0].trim()}</span></div>
+              <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+              <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>QR</Btn>
+              <Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
+            </div>
+          </Card>
+        ))}
+      </div>
       {modal&&(
         <Modal title={modal==='add'?'Add Member':'Edit Member'} onClose={()=>setModal(null)}>
-          <FR label="Full Name"><input style={inp} value={form.name} onChange={e=>set('name',e.target.value)}/></FR>
-          <FR label="Phone"><input style={inp} value={form.phone} onChange={e=>set('phone',e.target.value)}/></FR>
+          <FR label="Full Name *"><input style={inp} value={form.name} onChange={e=>set('name',e.target.value)}/></FR>
+          <FR label="Phone *"><input style={inp} value={form.phone} onChange={e=>set('phone',e.target.value)}/></FR>
           <FR label="Plan"><select style={inp} value={form.plan} onChange={e=>set('plan',e.target.value)}>{PLANS.map(p=><option key={p}>{p}</option>)}</select></FR>
           <FR label="Joined"><input style={inp} type="date" value={form.joined} onChange={e=>set('joined',e.target.value)}/></FR>
+          <FR label="Membership End Date"><input style={inp} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)} placeholder="Auto-calculated if blank"/></FR>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option>Active</option><option>Inactive</option></select></FR>
             <FR label="Fee"><select style={inp} value={form.fee} onChange={e=>set('fee',e.target.value)}><option>Paid</option><option>Unpaid</option></select></FR>
@@ -376,97 +538,138 @@ function Members({ members, reload, toast }) {
           </div>
         </Modal>
       )}
+      {qrMember&&(
+        <Modal title={`QR – ${qrMember.name}`} onClose={()=>setQrMember(null)}>
+          <QRCodeDisplay member={qrMember}/>
+          <p style={{fontSize:12,color:'#6b6490',textAlign:'center',marginTop:10}}>Member scans this QR once per day to mark attendance.</p>
+        </Modal>
+      )}
     </div>
   )
 }
 
-/* ════════════════════════════════════════════
-   OFFERS — with POSTER image upload
-════════════════════════════════════════════ */
+function Attendance({ reload, toast }) {
+  const [todayLog,setTodayLog] = useState([])
+  const [loadingLog,setLoadingLog] = useState(true)
+  const [tab,setTab] = useState('scan')
+
+  const loadLog = async () => {
+    setLoadingLog(true)
+    try { const d=await apiFetch('/api/admin/attendance/today'); setTodayLog(d||[]) }
+    catch{}
+    setLoadingLog(false)
+  }
+  useEffect(()=>{ loadLog() },[])
+
+  const TabBtn = ({id,label}) => (
+    <button onClick={()=>setTab(id)} style={{flex:1,padding:'10px 0',background:tab===id?'#7c3aed':'transparent',border:'none',borderRadius:10,color:tab===id?'#fff':'#6b6490',fontWeight:600,fontSize:14,cursor:'pointer',fontFamily:"'Poppins',sans-serif",transition:'all .2s',minHeight:44}}>
+      {label}
+    </button>
+  )
+  return(
+    <div>
+      <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:20}}>ATTENDANCE</h2>
+      <div style={{display:'flex',gap:6,background:'#0d0b1a',padding:6,borderRadius:14,marginBottom:24,border:'1px solid #2a2347'}}>
+        <TabBtn id="scan" label="📷 Scan QR"/>
+        <TabBtn id="log"  label={`📋 Today's Log (${todayLog.length})`}/>
+      </div>
+      {tab==='scan'&&(
+        <div>
+          <Card style={{padding:24,marginBottom:20}}>
+            <p style={{color:'#6b6490',fontSize:13,marginBottom:20,textAlign:'center',lineHeight:1.7}}>
+              Open a member's QR code and point the camera at it.<br/>
+              Each member can check in <strong style={{color:'#7c3aed'}}>once per day</strong>.
+            </p>
+            <QRScanner onSuccess={()=>{ loadLog(); toast('Attendance marked!','ok') }}/>
+          </Card>
+          <div style={{background:'rgba(124,58,237,0.06)',border:'1px solid #2a2347',borderRadius:12,padding:'14px 18px',fontSize:13,color:'#6b6490',lineHeight:1.7}}>
+            💡 Go to <strong style={{color:'#f0eeff'}}>Members</strong> → tap <strong style={{color:'#7c3aed'}}>QR</strong> next to any member to view and download their QR code.
+          </div>
+        </div>
+      )}
+      {tab==='log'&&(
+        <Card>
+          <div style={{padding:'14px 18px',borderBottom:'1px solid #2a2347',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+            <span style={{fontWeight:600,fontSize:14}}>Today — {new Date().toDateString()}</span>
+            <button onClick={loadLog} style={{background:'none',border:'1px solid #2a2347',color:'#6b6490',cursor:'pointer',borderRadius:8,padding:'5px 12px',fontSize:12,minHeight:36}}>↻ Refresh</button>
+          </div>
+          {loadingLog?<div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div>
+           :todayLog.length===0?<p style={{textAlign:'center',color:'#6b6490',padding:40}}>No check-ins today yet.</p>
+           :<>
+              <div className="adm-table-desktop">
+                <Table heads={['Member','Phone','Plan','Time']}>
+                  {todayLog.map(a=>(
+                    <tr key={a.id} className="adm-row">
+                      <Td style={{fontWeight:500}}>{a.memberName}</Td>
+                      <Td style={{color:'#6b6490',fontSize:13}}>{a.phone}</Td>
+                      <Td style={{fontSize:13}}>{a.plan?.split('–')[0].trim()}</Td>
+                      <Td style={{color:'#22c55e',fontSize:13}}>✅ {a.time}</Td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+              <div className="member-card">
+                {todayLog.map(a=>(
+                  <div key={a.id} style={{padding:'12px 18px',borderBottom:'1px solid #2a2347',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                    <div><p style={{fontWeight:600,fontSize:14,marginBottom:2}}>{a.memberName}</p><p style={{fontSize:12,color:'#6b6490'}}>{a.plan?.split('–')[0].trim()}</p></div>
+                    <span style={{color:'#22c55e',fontSize:13,flexShrink:0}}>✅ {a.time}</span>
+                  </div>
+                ))}
+              </div>
+           </>
+          }
+        </Card>
+      )}
+    </div>
+  )
+}
+
 function Offers({ offers, reload, toast }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
   const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
-
-  const save=async()=>{
-    if(!form.title)return; setSaving(true)
-    try{ if(modal==='add')await apiFetch('/api/admin/offers','POST',form); else await apiFetch(`/api/admin/offers/${modal.id}`,'PUT',form); await reload(); toast('Offer saved!','ok'); setModal(null) }catch{toast('Save failed','err')}
-    setSaving(false)
-  }
-  const toggle=async o=>{
-    const updated={...o,status:o.status==='ON'?'OFF':'ON'}
-    try{await apiFetch(`/api/admin/offers/${o.id}`,'PUT',updated);await reload();toast(updated.status==='ON'?'🔴 Offer is LIVE on homepage!':'Offer deactivated','ok')}catch{toast('Update failed','err')}
-  }
+  const save=async()=>{if(!form.title)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/offers','POST',form);else await apiFetch(`/api/admin/offers/${modal.id}`,'PUT',form);await reload();toast('Offer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
+  const toggle=async o=>{const u={...o,status:o.status==='ON'?'OFF':'ON'};try{await apiFetch(`/api/admin/offers/${o.id}`,'PUT',u);await reload();toast(u.status==='ON'?'🔴 Offer is LIVE!':'Offer deactivated','ok')}catch{toast('Update failed','err')}}
   const del=async id=>{try{await apiFetch(`/api/admin/offers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
-
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:12}}>
         <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>OFFERS</h2>
         <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ New Offer</Btn>
       </div>
-
       <div style={{background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.25)',borderRadius:10,padding:'12px 18px',fontSize:13,color:'#ddd',marginBottom:24}}>
-        💡 <strong style={{color:C.accent}}>Activate</strong> an offer → banner + poster appears on homepage. Upload a poster image for a visual banner.
+        💡 <strong style={{color:'#7c3aed'}}>Activate</strong> an offer → banner appears on homepage.
       </div>
-
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:20}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:20}}>
         {offers.map(o=>(
-          <Card key={o.id} className="adm-fade" style={{overflow:'hidden',border:o.status==='ON'?`2px solid ${C.accent}`:`1px solid ${C.border}`,boxShadow:o.status==='ON'?'0 0 24px rgba(124,58,237,0.2)':'none',transition:'all .3s'}}>
-            {/* Poster image */}
-            {o.poster
-              ? <div style={{position:'relative'}}>
-                  <img src={o.poster} alt="" style={{width:'100%',height:160,objectFit:'cover',display:'block'}}/>
-                  {o.status==='ON' && <div style={{position:'absolute',top:10,left:10,background:C.accent,color:'#fff',borderRadius:20,padding:'4px 12px',fontSize:11,fontWeight:700}}>🔴 LIVE</div>}
-                </div>
-              : o.status==='ON' && <div style={{height:6,background:C.accent}}/>
-            }
+          <Card key={o.id} className="adm-fade" style={{overflow:'hidden',border:o.status==='ON'?'2px solid #7c3aed':'1px solid #2a2347',boxShadow:o.status==='ON'?'0 0 24px rgba(124,58,237,0.2)':'none',transition:'all .3s'}}>
+            {o.poster?<div style={{position:'relative'}}><img src={o.poster} alt="" style={{width:'100%',height:160,objectFit:'cover',display:'block'}}/>{o.status==='ON'&&<div style={{position:'absolute',top:10,left:10,background:'#7c3aed',color:'#fff',borderRadius:20,padding:'4px 12px',fontSize:11,fontWeight:700}}>🔴 LIVE</div>}</div>:o.status==='ON'&&<div style={{height:6,background:'#7c3aed'}}/>}
             <div style={{padding:22}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,flexWrap:'wrap',gap:8}}>
                 <Badge label={o.status==='ON'?'🔴 LIVE':'⚫ Hidden'} color={o.status==='ON'?'green':'red'}/>
-                <div style={{display:'flex',gap:6}}>
-                  <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...o});setModal(o)}}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn>
-                </div>
+                <div style={{display:'flex',gap:6}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...o});setModal(o)}}>Edit</Btn><Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn></div>
               </div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:6}}>{o.title}</div>
-              <div style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:1.6}}>{o.description}</div>
-              <Btn variant={o.status==='ON'?'muted':'primary'} onClick={()=>toggle(o)} style={{fontSize:13}}>
-                {o.status==='ON'?'⏸ Deactivate':'▶ Activate on Homepage'}
-              </Btn>
+              <div style={{fontSize:13,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{o.description}</div>
+              <Btn variant={o.status==='ON'?'muted':'primary'} onClick={()=>toggle(o)} style={{fontSize:13,width:'100%',justifyContent:'center'}}>{o.status==='ON'?'⏸ Deactivate':'▶ Activate on Homepage'}</Btn>
             </div>
           </Card>
         ))}
-        {offers.length===0&&<p style={{color:C.muted,padding:40}}>No offers yet.</p>}
+        {offers.length===0&&<p style={{color:'#6b6490',padding:40}}>No offers yet.</p>}
       </div>
-
       {modal&&(
         <Modal title={modal==='add'?'New Offer':'Edit Offer'} onClose={()=>setModal(null)} wide>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20}}>
             <div>
               <FR label="Offer Title *"><input style={inp} value={form.title||''} onChange={e=>set('title',e.target.value)} placeholder="e.g. Summer Sale 🔥"/></FR>
               <FR label="Description"><input style={inp} value={form.description||''} onChange={e=>set('description',e.target.value)}/></FR>
               <FR label="Button Text"><input style={inp} value={form.btn||''} onChange={e=>set('btn',e.target.value)} placeholder="Join Now"/></FR>
               <FR label="Button Link"><input style={inp} value={form.link||''} onChange={e=>set('link',e.target.value)} placeholder="/pricing"/></FR>
-              <FR label="Status">
-                <select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}>
-                  <option value="OFF">OFF – Hidden from website</option>
-                  <option value="ON">ON – Show on homepage</option>
-                </select>
-              </FR>
+              <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option value="OFF">OFF – Hidden</option><option value="ON">ON – Live on homepage</option></select></FR>
             </div>
             <div>
-              <ImageUploader
-                value={form.poster}
-                onChange={v=>set('poster',v)}
-                label="Offer Poster / Banner Image"
-                hint="Recommended: 1200×400px, JPG or PNG. Max 5MB."
-                maxW={1200}
-                aspect="wide"
-              />
-              {form.poster && (
-                <div style={{fontSize:12,color:C.success,marginTop:-8,marginBottom:8}}>✅ Poster uploaded — will show on homepage banner</div>
-              )}
+              <ImageUploader value={form.poster} onChange={v=>set('poster',v)} label="Offer Poster" hint="1200×400px recommended." maxW={1200} aspect="wide"/>
+              {form.poster&&<div style={{fontSize:12,color:'#22c55e',marginTop:-8,marginBottom:8}}>✅ Poster uploaded</div>}
             </div>
           </div>
           <div style={{display:'flex',gap:10,marginTop:8}}>
@@ -479,122 +682,86 @@ function Offers({ offers, reload, toast }) {
   )
 }
 
-/* ════════════════════════════════════════════
-   LEADS
-════════════════════════════════════════════ */
 function Leads({ leads, reload, toast }) {
   const [search,setSearch]=useState('')
   const filtered=leads.filter(l=>l.name.toLowerCase().includes(search.toLowerCase())||l.phone.includes(search))
-  const wa=(phone,name)=>window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hello ${name}! Thank you for contacting Friends Fitness Club. How can we help you?`)}`, '_blank')
+  const wa=(phone,name)=>window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hello ${name}! Thank you for contacting Friends Fitness Club.`)}`, '_blank')
   const del=async id=>{try{await apiFetch(`/api/admin/leads/${id}`,'DELETE');await reload();toast('Removed','ok')}catch{toast('Failed','err')}}
   return(
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:26,flexWrap:'wrap',gap:12}}>
-        <div>
-          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>LEADS</h2>
-          <p style={{color:C.muted,fontSize:13,marginTop:2}}>Real-time contact form submissions from website</p>
-        </div>
-        <input style={{...inp,width:240}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div><h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>LEADS</h2><p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Contact form submissions</p></div>
+        <input style={{...inp,width:'min(220px,100%)'}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
       </div>
-      <Card>
+      <Card className="adm-table-desktop">
         <Table heads={['Name','Email','Phone','Message','Date','Actions']} empty={filtered.length===0?'No leads yet':''}>
           {filtered.map(l=>(
             <tr key={l.id} className="adm-row">
-              <Td style={{fontWeight:500}}>{l.name}</Td>
-              <Td style={{color:C.muted,fontSize:13}}>{l.email}</Td>
-              <Td style={{fontSize:13}}>{l.phone}</Td>
-              <Td style={{fontSize:12,color:C.muted,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.message}</Td>
-              <Td style={{fontSize:12,color:C.muted,whiteSpace:'nowrap'}}>{l.date}</Td>
-              <Td><div style={{display:'flex',gap:6}}>
-                <Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)}>💬 WhatsApp</Btn>
-                <Btn size="sm" variant="danger"  onClick={()=>del(l.id)}>Del</Btn>
-              </div></Td>
+              <Td style={{fontWeight:500}}>{l.name}</Td><Td style={{color:'#6b6490',fontSize:13}}>{l.email}</Td><Td style={{fontSize:13}}>{l.phone}</Td>
+              <Td style={{fontSize:12,color:'#6b6490',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.message}</Td>
+              <Td style={{fontSize:12,color:'#6b6490',whiteSpace:'nowrap'}}>{l.date}</Td>
+              <Td><div style={{display:'flex',gap:6}}><Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)}>💬 WA</Btn><Btn size="sm" variant="danger" onClick={()=>del(l.id)}>Del</Btn></div></Td>
             </tr>
           ))}
         </Table>
       </Card>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   TRAINERS — with PHOTO upload
-════════════════════════════════════════════ */
-function Trainers({ trainers, reload, toast }) {
-  const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
-  const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:''}
-  const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
-
-  const save=async()=>{
-    if(!form.name)return; setSaving(true)
-    try{ if(modal==='add')await apiFetch('/api/admin/trainers','POST',form); else await apiFetch(`/api/admin/trainers/${modal.id}`,'PUT',form); await reload(); toast('Trainer saved!','ok'); setModal(null) }catch{toast('Save failed','err')}
-    setSaving(false)
-  }
-  const del=async id=>{try{await apiFetch(`/api/admin/trainers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
-
-  return(
-    <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:26}}>
-        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>TRAINERS</h2>
-        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Trainer</Btn>
-      </div>
-
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:20}}>
-        {trainers.map(t=>(
-          <Card key={t.id} className="adm-fade" style={{padding:26,transition:'all .3s'}}>
-            {/* Photo + name row */}
-            <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:16}}>
-              <div style={{position:'relative',flexShrink:0}}>
-                {t.photo
-                  ? <img src={t.photo} alt={t.name} style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',border:`3px solid ${C.accent}`}}/>
-                  : <div style={{width:72,height:72,borderRadius:'50%',background:C.accentG,border:`3px solid ${C.accent}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>🏋</div>
-                }
-              </div>
-              <div>
-                <div style={{fontSize:17,fontWeight:700,marginBottom:2}}>{t.name}</div>
-                <div style={{fontSize:13,color:C.accent,fontWeight:600}}>{t.role}</div>
-                <Badge label={t.status} color={t.status==='Active'?'green':'red'}/>
-              </div>
+      <div className="member-card">
+        {filtered.length===0?<p style={{textAlign:'center',color:'#6b6490',padding:40}}>No leads yet</p>
+          :filtered.map(l=>(
+          <Card key={l.id} style={{marginBottom:12,padding:18}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,gap:8}}>
+              <div><p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{l.name}</p><p style={{fontSize:12,color:'#6b6490'}}>{l.email}</p></div>
+              <p style={{fontSize:12,color:'#6b6490',flexShrink:0}}>{l.date}</p>
             </div>
-            <div style={{fontSize:13,color:C.muted,marginBottom:2}}>⏱ {t.exp}</div>
-            <div style={{fontSize:13,color:C.muted,marginBottom:20}}>🎯 {t.spec}</div>
+            <p style={{fontSize:13,marginBottom:4}}>{l.phone}</p>
+            <p style={{fontSize:12,color:'#6b6490',marginBottom:14,lineHeight:1.6}}>{l.message}</p>
             <div style={{display:'flex',gap:8}}>
-              <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...t});setModal(t)}}>Edit</Btn>
-              <Btn size="sm" variant="danger" onClick={()=>del(t.id)}>Delete</Btn>
+              <Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)} style={{flex:1,justifyContent:'center'}}>💬 WhatsApp</Btn>
+              <Btn size="sm" variant="danger"  onClick={()=>del(l.id)} style={{flex:1,justifyContent:'center'}}>Delete</Btn>
             </div>
           </Card>
         ))}
       </div>
+    </div>
+  )
+}
 
+function Trainers({ trainers, reload, toast }) {
+  const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
+  const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:''}
+  const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
+  const save=async()=>{if(!form.name)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/trainers','POST',form);else await apiFetch(`/api/admin/trainers/${modal.id}`,'PUT',form);await reload();toast('Trainer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
+  const del=async id=>{try{await apiFetch(`/api/admin/trainers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:26,flexWrap:'wrap',gap:12}}>
+        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>TRAINERS</h2>
+        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Trainer</Btn>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20}}>
+        {trainers.map(t=>(
+          <Card key={t.id} className="adm-fade" style={{padding:26}}>
+            <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:16}}>
+              <div style={{flexShrink:0}}>{t.photo?<img src={t.photo} alt={t.name} style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',border:'3px solid #7c3aed'}}/>:<div style={{width:72,height:72,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'3px solid #7c3aed',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>🏋</div>}</div>
+              <div><div style={{fontSize:17,fontWeight:700,marginBottom:2}}>{t.name}</div><div style={{fontSize:13,color:'#7c3aed',fontWeight:600}}>{t.role}</div><Badge label={t.status} color={t.status==='Active'?'green':'red'}/></div>
+            </div>
+            <div style={{fontSize:13,color:'#6b6490',marginBottom:2}}>⏱ {t.exp}</div>
+            <div style={{fontSize:13,color:'#6b6490',marginBottom:20}}>🎯 {t.spec}</div>
+            <div style={{display:'flex',gap:8}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...t});setModal(t)}}>Edit</Btn><Btn size="sm" variant="danger" onClick={()=>del(t.id)}>Delete</Btn></div>
+          </Card>
+        ))}
+      </div>
       {modal&&(
         <Modal title={modal==='add'?'Add Trainer':'Edit Trainer'} onClose={()=>setModal(null)} wide>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
-            {/* Left — details */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20}}>
             <div>
               <FR label="Full Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)}/></FR>
               <FR label="Role"><input style={inp} value={form.role||''} onChange={e=>set('role',e.target.value)} placeholder="e.g. Head Trainer"/></FR>
               <FR label="Experience"><input style={inp} value={form.exp||''} onChange={e=>set('exp',e.target.value)} placeholder="e.g. 8+ Years"/></FR>
-              <FR label="Specialization"><input style={inp} value={form.spec||''} onChange={e=>set('spec',e.target.value)} placeholder="e.g. Weight Loss & Nutrition"/></FR>
-              <FR label="Status">
-                <select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}>
-                  <option>Active</option><option>Inactive</option>
-                </select>
-              </FR>
+              <FR label="Specialization"><input style={inp} value={form.spec||''} onChange={e=>set('spec',e.target.value)}/></FR>
+              <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option>Active</option><option>Inactive</option></select></FR>
             </div>
-            {/* Right — photo */}
-            <div>
-              <ImageUploader
-                value={form.photo}
-                onChange={v=>set('photo',v)}
-                label="Trainer Profile Photo"
-                hint="Square photo recommended. JPG or PNG. Max 5MB."
-                maxW={400}
-                aspect="square"
-              />
-              {form.photo && (
-                <div style={{fontSize:12,color:C.success,marginTop:-8}}>✅ Photo uploaded</div>
-              )}
-            </div>
+            <ImageUploader value={form.photo} onChange={v=>set('photo',v)} label="Trainer Photo" hint="Square photo. Max 5MB." maxW={400} aspect="square"/>
           </div>
           <div style={{display:'flex',gap:10,marginTop:16}}>
             <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Trainer'}</Btn>
@@ -606,18 +773,27 @@ function Trainers({ trainers, reload, toast }) {
   )
 }
 
-/* ════════════════════════════════════════════
-   SETTINGS
-════════════════════════════════════════════ */
 function Settings({ onLogout }) {
   const [saved,setSaved]=useState(false)
+  const [syncing,setSyncing]=useState(false)
+  const [syncResult,setSyncResult]=useState(null)
   const save=()=>{setSaved(true);setTimeout(()=>setSaved(false),2200)}
+  const syncSheets=async()=>{
+    setSyncing(true); setSyncResult(null)
+    try {
+      const data = await apiFetch('/api/admin/sync-sheets','POST')
+      if(data.success) setSyncResult({ok:true, msg:`Synced ${data.synced} members to Google Sheets!`})
+      else setSyncResult({ok:false, msg:data.error||'Sync failed'})
+    } catch(e){ setSyncResult({ok:false, msg:'Server error: '+e.message}) }
+    setSyncing(false)
+    setTimeout(()=>setSyncResult(null),5000)
+  }
   return(
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:26}}>SETTINGS</h2>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(270px,1fr))',gap:20}}>
         <Card style={{padding:26}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.accent,marginBottom:16}}>Gym Info</div>
+          <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:16}}>Gym Info</div>
           <FR label="Gym Name"><input style={inp} defaultValue="Friends Fitness Club"/></FR>
           <FR label="Phone"><input style={inp} defaultValue="+91 84848 05154"/></FR>
           <FR label="Email"><input style={inp} defaultValue="friendsfitnessclub18@gmail.com"/></FR>
@@ -625,16 +801,22 @@ function Settings({ onLogout }) {
           <Btn onClick={save}>{saved?'✓ Saved!':'Save Changes'}</Btn>
         </Card>
         <Card style={{padding:26}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.accent,marginBottom:16}}>Timings</div>
+          <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:16}}>Timings</div>
           <FR label="Opening"><input style={inp} defaultValue="5:00 AM"/></FR>
           <FR label="Closing"><input style={inp} defaultValue="10:00 PM"/></FR>
           <FR label="Days"><input style={inp} defaultValue="Monday – Saturday"/></FR>
           <FR label="Holiday"><input style={inp} defaultValue="Closed on Sunday"/></FR>
           <Btn onClick={save}>{saved?'✓ Saved!':'Save Timings'}</Btn>
         </Card>
+        <Card style={{padding:26,border:'1px solid rgba(34,197,94,0.2)'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#22c55e',marginBottom:10}}>📊 Google Sheets Sync</div>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:14,lineHeight:1.7}}>Sync all member data to your connected Google Sheet. Requires env vars to be set on Render.</p>
+          {syncResult&&<div style={{marginBottom:12,padding:'10px 14px',borderRadius:8,background:syncResult.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:syncResult.ok?'#22c55e':'#ef4444',fontSize:13}}>{syncResult.ok?'✅':'❌'} {syncResult.msg}</div>}
+          <Btn variant="success" onClick={syncSheets} disabled={syncing}>{syncing?<><Spinner size={13}/> Syncing…</>:'↑ Sync to Google Sheets'}</Btn>
+        </Card>
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.danger,marginBottom:10}}>Danger Zone</div>
-          <p style={{fontSize:13,color:C.muted,marginBottom:18,lineHeight:1.7}}>Logging out will end your admin session.</p>
+          <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>Logging out will end your admin session.</p>
           <Btn variant="danger" onClick={onLogout}>🚪 Logout</Btn>
         </Card>
       </div>
@@ -642,60 +824,62 @@ function Settings({ onLogout }) {
   )
 }
 
-/* ════════════════════════════════════════════
-   SIDEBAR
-════════════════════════════════════════════ */
 const NAV = [
-  {id:'dashboard', icon:'⚡', label:'Dashboard'  },
-  {id:'members',   icon:'👥', label:'Members'    },
-  {id:'offers',    icon:'🔥', label:'Offers'     },
-  {id:'leads',     icon:'📬', label:'Leads'      },
-  {id:'trainers',  icon:'🏋', label:'Trainers'  },
-  {id:'store',     icon:'🛒', label:'Store'      },
-  {id:'pricing',   icon:'💳', label:'Pricing'    },
-  {id:'exercises', icon:'🏃', label:'Exercises'  },
-  {id:'settings',  icon:'⚙️',  label:'Settings'   },
+  {id:'dashboard',  icon:'⚡', label:'Dashboard'  },
+  {id:'members',    icon:'👥', label:'Members'    },
+  {id:'attendance', icon:'📅', label:'Attendance' },
+  {id:'offers',     icon:'🔥', label:'Offers'     },
+  {id:'leads',      icon:'📬', label:'Leads'      },
+  {id:'trainers',   icon:'🏋', label:'Trainers'  },
+  {id:'store',      icon:'🛒', label:'Store'      },
+  {id:'pricing',    icon:'💳', label:'Pricing'    },
+  {id:'exercises',  icon:'🏃', label:'Exercises'  },
+  {id:'settings',   icon:'⚙️',  label:'Settings'   },
 ]
 
-function Sidebar({ active, onChange, onLogout, collapsed }) {
-  const W=collapsed?64:220
-  return(
-    <aside className="adm-sidebar" style={{width:W,minHeight:'100vh',background:C.surface,borderRight:`1px solid ${C.border}`,position:'fixed',top:0,left:0,zIndex:100,display:'flex',flexDirection:'column',transition:'width .3s',overflow:'hidden'}}>
-      <div style={{padding:collapsed?'22px 0':'24px 20px',borderBottom:`1px solid ${C.border}`,textAlign:collapsed?'center':'left',whiteSpace:'nowrap'}}>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:3,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>{collapsed?'F':'FFC'}</div>
-        {!collapsed&&<div style={{fontSize:9,color:C.muted,letterSpacing:2,marginTop:2}}>ADMIN PORTAL</div>}
-      </div>
-      <nav style={{flex:1,padding:'10px 0'}}>
-        {NAV.map(n=>(
-          <div key={n.id} className="adm-nav" onClick={()=>onChange(n.id)} style={{justifyContent:collapsed?'center':'flex-start',color:active===n.id?C.accent:C.muted,background:active===n.id?C.accentG:'transparent',borderLeft:active===n.id?`3px solid ${C.accent}`:'3px solid transparent'}}>
-            <span style={{fontSize:17}}>{n.icon}</span>
-            {!collapsed&&<span>{n.label}</span>}
+function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose }) {
+  const W = collapsed ? 64 : 220
+  return (
+    <>
+      {mobileOpen&&<div className="adm-overlay-bg" onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:198,backdropFilter:'blur(2px)'}}/>}
+      <aside className={`adm-sidebar-fixed${mobileOpen?' open':''}`} style={{width:W,minHeight:'100vh',background:'#0d0b1a',borderRight:'1px solid #2a2347',position:'fixed',top:0,left:0,zIndex:199,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div style={{padding:collapsed?'22px 0':'24px 20px',borderBottom:'1px solid #2a2347',display:'flex',alignItems:'center',justifyContent:'space-between',whiteSpace:'nowrap'}}>
+          <div style={{textAlign:collapsed?'center':'left'}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:3,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>{collapsed?'F':'FFC'}</div>
+            {!collapsed&&<div style={{fontSize:9,color:'#6b6490',letterSpacing:2,marginTop:2}}>ADMIN PORTAL</div>}
           </div>
-        ))}
-      </nav>
-      <div style={{padding:collapsed?'14px 0':'14px 20px',borderTop:`1px solid ${C.border}`}}>
-        <div onClick={onLogout} style={{cursor:'pointer',color:C.danger,display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:600,justifyContent:collapsed?'center':'flex-start'}}>
-          <span>🚪</span>{!collapsed&&'Logout'}
+          {mobileOpen&&<button className="adm-overlay-bg" onClick={onClose} style={{background:'none',border:'none',color:'#6b6490',fontSize:20,cursor:'pointer',padding:'4px 8px',minWidth:40,minHeight:40,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
         </div>
-      </div>
-    </aside>
+        <nav style={{flex:1,padding:'10px 0',overflowY:'auto'}}>
+          {NAV.map(n=>(
+            <div key={n.id} className="adm-nav" onClick={()=>{onChange(n.id);onClose?.()}} style={{justifyContent:collapsed?'center':'flex-start',color:active===n.id?'#7c3aed':'#6b6490',background:active===n.id?'rgba(124,58,237,0.12)':'transparent',borderLeft:active===n.id?'3px solid #7c3aed':'3px solid transparent'}}>
+              <span style={{fontSize:17}}>{n.icon}</span>
+              {!collapsed&&<span>{n.label}</span>}
+            </div>
+          ))}
+        </nav>
+        <div style={{padding:collapsed?'14px 0':'14px 20px',borderTop:'1px solid #2a2347'}}>
+          <div onClick={onLogout} style={{cursor:'pointer',color:'#ef4444',display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:600,justifyContent:collapsed?'center':'flex-start',padding:'8px 0',minHeight:44}}>
+            <span>🚪</span>{!collapsed&&'Logout'}
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
 
-/* ════════════════════════════════════════════
-   ROOT
-════════════════════════════════════════════ */
 export default function AdminPage() {
-  const [auth,setAuth]           = useState(false)
-  const [page,setPage]           = useState('dashboard')
-  const [collapsed,setCollapsed] = useState(false)
-  const [members,setMembers]     = useState([])
-  const [leads,setLeads]         = useState([])
-  const [offers,setOffers]       = useState([])
-  const [trainers,setTrainers]   = useState([])
-  const [products,setProducts]   = useState([])
-  const [loading,setLoading]     = useState(true)
-  const [toastData,setToastData] = useState(null)
+  const [auth,setAuth]             = useState(false)
+  const [page,setPage]             = useState('dashboard')
+  const [collapsed,setCollapsed]   = useState(false)
+  const [mobileOpen,setMobileOpen] = useState(false)
+  const [members,setMembers]       = useState([])
+  const [leads,setLeads]           = useState([])
+  const [offers,setOffers]         = useState([])
+  const [trainers,setTrainers]     = useState([])
+  const [products,setProducts]     = useState([])
+  const [loading,setLoading]       = useState(true)
+  const [toastData,setToastData]   = useState(null)
 
   const showToast = (msg, type='ok') => { setToastData({msg,type}); setTimeout(()=>setToastData(null),3200) }
 
@@ -719,58 +903,48 @@ export default function AdminPage() {
 
   if (!auth) return <><style>{CSS}</style><LoginPage onLogin={()=>setAuth(true)}/></>
 
-  const SL=collapsed?64:220
-  /* shared props for sub-panels */
+  const SL = collapsed ? 64 : 220
   const shared = { apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast:showToast }
 
   const PAGES = {
-    dashboard: <Dashboard members={members} products={products} leads={leads} offers={offers}/>,
-    members:   <Members   members={members}  reload={loadAll} toast={showToast}/>,
-    offers:    <Offers    offers={offers}     reload={loadAll} toast={showToast}/>,
-    leads:     <Leads     leads={leads}       reload={loadAll} toast={showToast}/>,
-    trainers:  <Trainers  trainers={trainers} reload={loadAll} toast={showToast}/>,
-    store:     <AdminStore     {...shared}/>,
-    pricing:   <AdminPricing   {...shared}/>,
-    exercises: <AdminExercises {...shared}/>,
-    settings:  <Settings  onLogout={()=>setAuth(false)}/>,
+    dashboard:  <Dashboard  members={members} products={products} leads={leads} offers={offers} onNavigate={setPage}/>,
+    members:    <Members    members={members} reload={loadAll} toast={showToast}/>,
+    attendance: <Attendance reload={loadAll} toast={showToast}/>,
+    offers:     <Offers     offers={offers}  reload={loadAll} toast={showToast}/>,
+    leads:      <Leads      leads={leads}    reload={loadAll} toast={showToast}/>,
+    trainers:   <Trainers   trainers={trainers} reload={loadAll} toast={showToast}/>,
+    store:      <AdminStore     {...shared}/>,
+    pricing:    <AdminPricing   {...shared}/>,
+    exercises:  <AdminExercises {...shared}/>,
+    settings:   <Settings  onLogout={()=>setAuth(false)}/>,
   }
 
   return (
     <>
       <style>{CSS}</style>
-      <div style={{display:'flex',minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'Poppins',sans-serif"}}>
-        <Sidebar active={page} onChange={setPage} onLogout={()=>setAuth(false)} collapsed={collapsed}/>
-        <div className="adm-main" style={{marginLeft:SL,flex:1,display:'flex',flexDirection:'column',transition:'margin-left .3s'}}>
-          {/* topbar */}
-          <div style={{position:'sticky',top:0,zIndex:50,background:C.bg,borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px clamp(12px,3vw,26px)'}}>
-            <div style={{display:'flex',alignItems:'center',gap:14}}>
-              <button onClick={()=>setCollapsed(c=>!c)} style={{background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:20}}>
-                {collapsed?'☰':'✕'}
-              </button>
-              {offers.find(o=>o.status==='ON') && (
-                <div style={{fontSize:12,background:'rgba(124,58,237,0.15)',color:C.accent,border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'3px 12px',fontWeight:600}}>
-                  🔴 Offer live on website
-                </div>
-              )}
+      <div style={{display:'flex',minHeight:'100vh',background:'#06050f',color:'#f0eeff',fontFamily:"'Poppins',sans-serif"}}>
+        <Sidebar active={page} onChange={setPage} onLogout={()=>setAuth(false)} collapsed={collapsed} mobileOpen={mobileOpen} onClose={()=>setMobileOpen(false)}/>
+        <div className="adm-main" style={{marginLeft:SL,flex:1,display:'flex',flexDirection:'column',transition:'margin-left .3s',minWidth:0}}>
+          <div style={{position:'sticky',top:0,zIndex:50,background:'#06050f',borderBottom:'1px solid #2a2347',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px clamp(12px,3vw,26px)',gap:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <button onClick={()=>setMobileOpen(o=>!o)} className="adm-hamburger" style={{background:'none',border:'none',color:'#6b6490',cursor:'pointer',fontSize:22,display:'none',padding:'4px 8px',minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>☰</button>
+              <button onClick={()=>setCollapsed(c=>!c)} className="hide-mobile" style={{background:'none',border:'none',color:'#6b6490',cursor:'pointer',fontSize:20,minWidth:36,minHeight:36}}>{collapsed?'☰':'✕'}</button>
+              {offers.find(o=>o.status==='ON')&&<div style={{fontSize:12,background:'rgba(124,58,237,0.15)',color:'#7c3aed',border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'3px 12px',fontWeight:600,whiteSpace:'nowrap'}}>🔴 Offer live</div>}
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <button onClick={loadAll} style={{background:'none',border:`1px solid ${C.border}`,color:C.muted,cursor:'pointer',fontSize:13,borderRadius:8,padding:'5px 12px'}}>
-                {loading?<Spinner size={12}/>:'↻ Refresh'}
+            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+              <button onClick={loadAll} style={{background:'none',border:'1px solid #2a2347',color:'#6b6490',cursor:'pointer',fontSize:13,borderRadius:8,padding:'6px 12px',minHeight:36,display:'flex',alignItems:'center',gap:4}}>
+                {loading?<Spinner size={12}/>:'↻'}<span className="hide-mobile">{loading?'':'Refresh'}</span>
               </button>
-              <span style={{fontSize:12,color:C.muted}}>{new Date().toDateString()}</span>
-              <div style={{width:32,height:32,borderRadius:'50%',background:C.accentG,border:`2px solid ${C.accent}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>👤</div>
+              <span className="hide-mobile" style={{fontSize:12,color:'#6b6490'}}>{new Date().toDateString()}</span>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'2px solid #7c3aed',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>👤</div>
             </div>
           </div>
-          {/* content */}
-          <main key={page} className="adm-fade" style={{padding:'clamp(16px,3vw,30px) clamp(12px,3vw,26px)',flex:1}}>
-            {loading && page==='dashboard'
-              ? <div style={{textAlign:'center',padding:80}}><Spinner size={36}/><p style={{color:C.muted,marginTop:16,fontSize:14}}>Loading data…</p></div>
-              : PAGES[page]
-            }
+          <main key={page} className="adm-fade" style={{padding:'clamp(16px,3vw,30px) clamp(12px,3vw,26px)',flex:1,minWidth:0,overflowX:'hidden'}}>
+            {loading&&page==='dashboard'?<div style={{textAlign:'center',padding:80}}><Spinner size={36}/><p style={{color:'#6b6490',marginTop:16,fontSize:14}}>Loading data…</p></div>:PAGES[page]}
           </main>
         </div>
       </div>
-      {toastData && <Toast msg={toastData.msg} type={toastData.type}/>}
+      {toastData&&<Toast msg={toastData.msg} type={toastData.type}/>}
     </>
   )
 }
