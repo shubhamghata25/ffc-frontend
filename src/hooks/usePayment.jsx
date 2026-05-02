@@ -63,7 +63,7 @@ export async function openRazorpay({ amount, name, description, prefill={}, onSu
         const vres = await fetch(`${API}/api/verify-payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...response, meta: { ...meta, amount, name, description } }),
+          body: JSON.stringify({ ...response, meta }),
         })
         const data = await vres.json()
         if (data.success) onSuccess?.(response, data.order)

@@ -73,50 +73,69 @@ export default function Store() {
     setPayProduct(product)
   }
 
-  async function doRazorpay(product){
+  // Customer detail state for store checkout
+  const [storeCustomer, setStoreCustomer] = useState({ name:'', email:'', phone:'' })
+  const [showCustomerForm, setShowCustomerForm] = useState(null) // 'product'|'cart'
+  const [pendingProduct, setPendingProduct] = useState(null)
+  const setC = (k,v) => setStoreCustomer(f=>({...f,[k]:v}))
+  const customerValid = storeCustomer.name.trim().length>1 && storeCustomer.phone.replace(/\D/g,'').length>=10
+
+  async function doRazorpay(product, customer){
     setPayProduct(null); setPaying(product.id)
     info(`Opening payment for ${product.name}…`)
     await openRazorpay({
       amount:      product.price,
       name:        product.name,
-      description: `${product.name} — ₹${product.price}`,
-      meta:        { type:'store_product', itemId:product.id, itemName:product.name },
-      onSuccess: (resp)=>{ success(`✅ Payment successful!`); setPaying(null) },
+      description: `${product.name} — Rs.${product.price}`,
+      prefill:     { name:customer.name, email:customer.email, contact:customer.phone },
+      meta: {
+        type:'store_product', itemId:product.id, itemName:product.name,
+        customerName:customer.name, customerEmail:customer.email, customerPhone:customer.phone,
+        productName:product.name, productPrice:product.price,
+      },
+      onSuccess: ()=>{ success(`Order confirmed! Check your email for details.`); setPaying(null) },
       onFailure: (msg)=>{ if(!msg.includes('cancelled')) error(msg); setPaying(null) },
     })
     setPaying(null)
   }
 
-  function doUPI(product){
+  function doUPI(product, customer){
     setPayProduct(null)
     info(/Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Opening UPI app…' : 'UPI best on mobile — trying…')
     openPhonePeUPI({
       amount: product.price,
       name:   product.name,
-      onSuccess: ()=> success('✅ UPI payment initiated! Share screenshot on WhatsApp to confirm.'),
+      onSuccess: ()=> success('UPI payment initiated! Share screenshot on WhatsApp to confirm.'),
       onFailure: (msg)=> error(msg),
     })
   }
 
-  function doWhatsApp(product){
+  function doWhatsApp(product, customer){
     setPayProduct(null)
-    openWhatsAppOrder({ productName: product.name, price: product.price })
+    const msg = `Hello! I want to order ${product.name} for Rs.${product.price}.\nName: ${customer?.name||''}\nPhone: ${customer?.phone||''}`
+    openWhatsAppOrder({ productName: product.name, price: product.price, msg })
   }
 
-  async function handleCartCheckout(){
+  async function handleCartCheckout(customer){
     if(cart.length===0) return
     const totalAmt = cart.reduce((s,i)=>s+i.price*i.qty,0)
     const desc = cart.map(i=>`${i.name} x${i.qty}`).join(', ')
-    setPaying('cart')
+    setShowCart(false); setPaying('cart')
     info('Opening payment for cart…')
     await openRazorpay({
       amount: totalAmt,
       name: 'FFC Store Order',
       description: desc,
-      meta: { type:'store_cart', items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})) },
-      onSuccess: (resp)=>{
-        success(`✅ Order placed! ID: ${resp.razorpay_payment_id}`)
-        clear(); setShowCart(false); setPaying(null)
+      prefill: { name:customer.name, email:customer.email, contact:customer.phone },
+      meta: {
+        type:'store_cart',
+        customerName:customer.name, customerEmail:customer.email, customerPhone:customer.phone,
+        items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})),
+        totalAmount:totalAmt, description:desc,
+      },
+      onSuccess: ()=>{
+        success(`Order placed! Check your email for confirmation.`)
+        clear(); setPaying(null)
       },
       onFailure: (msg)=>{ if(!msg.includes('cancelled')) error(msg); setPaying(null) },
     })
@@ -202,11 +221,11 @@ export default function Store() {
                       <span>Total</span>
                       <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',fontSize:18}}>₹{total.toLocaleString()}</span>
                     </div>
-                    <button className="pay-btn pay-btn-primary" onClick={handleCartCheckout} disabled={paying==='cart'}
+                    <button className="pay-btn pay-btn-primary" onClick={()=>{ setShowCustomerForm('cart'); setShowCart(false) }} disabled={paying==='cart'}
                       style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                       {paying==='cart'
                         ? <><span style={{width:14,height:14,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/> Processing…</>
-                        : '🔒 Checkout via Razorpay'
+                        : '🔒 Checkout'
                       }
                     </button>
                   </>
@@ -311,36 +330,71 @@ export default function Store() {
         )}
       </section>
 
-      {/* Payment method mini-modal for store products */}
-      {payProduct && (
-        <div onClick={()=>setPayProduct(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 0'}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:'20px 20px 0 0',padding:'clamp(20px,4vw,32px)',width:'100%',maxWidth:480}}>
-            <div style={{width:40,height:4,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0 auto 20px'}}/>
-            <div style={{textAlign:'center',marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:'clamp(14px,2vw,16px)',marginBottom:4}}>{payProduct.name}</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(28px,5vw,36px)',background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>₹{payProduct.price.toLocaleString()}</div>
+      {/* ── STEP 1: Customer Details Modal (product or cart) ── */}
+      {(payProduct || showCustomerForm) && (() => {
+        const isCart   = showCustomerForm === 'cart'
+        const title    = isCart ? 'Cart Checkout' : payProduct?.name
+        const subprice = isCart ? `Rs.${total.toLocaleString()}` : `Rs.${payProduct?.price?.toLocaleString()}`
+        const inpS     = {width:'100%',padding:'11px 13px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:10,color:'#f0eeff',fontFamily:"'Poppins',sans-serif",fontSize:14,outline:'none',boxSizing:'border-box'}
+        const close    = () => { setPayProduct(null); setShowCustomerForm(null) }
+        return (
+          <div onClick={close} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:'20px 20px 0 0',padding:'clamp(20px,4vw,28px)',width:'100%',maxWidth:460,maxHeight:'92vh',overflowY:'auto'}}>
+              <div style={{width:40,height:4,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0 auto 16px'}}/>
+              {/* Summary */}
+              <div style={{textAlign:'center',marginBottom:18}}>
+                <div style={{fontSize:11,color:'#9c59f7',fontWeight:700,letterSpacing:2,textTransform:'uppercase',marginBottom:4}}>Your Details</div>
+                <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>{title}</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>{subprice}</div>
+              </div>
+              {/* Fields */}
+              <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:14}}>
+                <div>
+                  <label style={{fontSize:11,color:'#6b6490',display:'block',marginBottom:4}}>Full Name *</label>
+                  <input value={storeCustomer.name} onChange={e=>setC('name',e.target.value)} placeholder="Rahul Sharma" style={inpS}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:'#6b6490',display:'block',marginBottom:4}}>Phone Number *</label>
+                  <input value={storeCustomer.phone} onChange={e=>setC('phone',e.target.value)} placeholder="10-digit mobile" type="tel" style={inpS}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:'#6b6490',display:'block',marginBottom:4}}>Email (for order confirmation)</label>
+                  <input value={storeCustomer.email} onChange={e=>setC('email',e.target.value)} placeholder="your@email.com" type="email" style={inpS}/>
+                  <p style={{fontSize:11,color:'#7c3aed',marginTop:5}}>📧 Order confirmation will be sent to this email</p>
+                </div>
+              </div>
+              {/* Payment buttons */}
+              {customerValid ? (
+                <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                  <button onClick={()=>{ isCart ? handleCartCheckout(storeCustomer) : doRazorpay(payProduct, storeCustomer); close() }}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                    <span style={{fontSize:20}}>💳</span>
+                    <div style={{textAlign:'left'}}><div>Card / Net Banking / UPI</div><div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>Razorpay — GPay, PhonePe, all banks</div></div>
+                    <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
+                  </button>
+                  {!isCart && (
+                    <button onClick={()=>{ doUPI(payProduct, storeCustomer); close() }}
+                      style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(99,102,241,0.08)',border:'1.5px solid rgba(99,102,241,0.25)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                      <span style={{fontSize:20}}>📱</span>
+                      <div style={{textAlign:'left'}}><div>UPI / PhonePe Direct</div><div style={{fontSize:11,color:'#818cf8',fontWeight:400}}>Opens UPI app on mobile</div></div>
+                      <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
+                    </button>
+                  )}
+                  <button onClick={()=>{ doWhatsApp(isCart?{name:'Cart Order',price:total}:payProduct, storeCustomer); close() }}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(37,211,102,0.08)',border:'1.5px solid rgba(37,211,102,0.2)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                    <span style={{fontSize:20}}>💬</span>
+                    <div style={{textAlign:'left'}}><div>WhatsApp Order</div><div style={{fontSize:11,color:'#4ade80',fontWeight:400}}>Chat to confirm &amp; pay manually</div></div>
+                    <span style={{marginLeft:'auto',color:'#4ade80'}}>›</span>
+                  </button>
+                </div>
+              ) : (
+                <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name and phone to continue</p>
+              )}
+              <button onClick={close} style={{width:'100%',marginTop:12,padding:'10px',background:'rgba(255,255,255,0.04)',border:'none',borderRadius:10,color:'#6b6490',cursor:'pointer',fontFamily:"'Poppins',sans-serif",fontSize:13}}>Cancel</button>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <button onClick={()=>doRazorpay(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
-                <span style={{fontSize:20}}>💳</span>
-                <div style={{textAlign:'left'}}><div>Card / Net Banking / UPI</div><div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>via Razorpay — GPay, PhonePe, all banks</div></div>
-                <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
-              </button>
-              <button onClick={()=>doUPI(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(99,102,241,0.08)',border:'1.5px solid rgba(99,102,241,0.25)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
-                <span style={{fontSize:20}}>📱</span>
-                <div style={{textAlign:'left'}}><div>PhonePe / UPI Direct</div><div style={{fontSize:11,color:'#818cf8',fontWeight:400}}>Opens UPI app directly on mobile</div></div>
-                <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
-              </button>
-              <button onClick={()=>doWhatsApp(payProduct)} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(37,211,102,0.08)',border:'1.5px solid rgba(37,211,102,0.2)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
-                <span style={{fontSize:20}}>💬</span>
-                <div style={{textAlign:'left'}}><div>WhatsApp Order</div><div style={{fontSize:11,color:'#4ade80',fontWeight:400}}>Chat to confirm &amp; pay manually</div></div>
-                <span style={{marginLeft:'auto',color:'#4ade80'}}>›</span>
-              </button>
-            </div>
-            <button onClick={()=>setPayProduct(null)} style={{width:'100%',marginTop:14,padding:'10px',background:'rgba(255,255,255,0.05)',border:'none',borderRadius:10,color:'#6b6490',cursor:'pointer',fontFamily:"'Poppins',sans-serif",fontSize:13}}>Cancel</button>
           </div>
-        </div>
-      )}
+        )
+      })()}
       <ToastContainer toasts={toasts}/>
     </div>
   )
