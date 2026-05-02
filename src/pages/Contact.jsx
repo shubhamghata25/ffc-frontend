@@ -81,12 +81,27 @@ export default function Contact() {
                 </div>
               ))}
 
-              {/* Map embed */}
-              <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10, display:'block' }}>
-                <iframe title="gym-map"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3721.1!2d79.08!3d21.13!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjHCsDA3JzQ4LjAiTiA3OcKwMDQnNDguMCJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
-                  width="100%" height="200" style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.7)' }} allowFullScreen loading="lazy"/>
+              {/* Map embed — Friends Fitness Club, Wardhaman Nagar, Nagpur */}
+              <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid rgba(124,58,237,0.2)', marginTop:10 }}>
+                <iframe
+                  title="Friends Fitness Club Location"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3723.139752!2d78.9485913!3d21.1394393!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bd4eb8092e96545%3A0xca49c353e889435!2sFriends%20fitness%20club!5e0!3m2!1sen!2sin!4v1714500000000!5m2!1sen!2sin"
+                  width="100%"
+                  height="240"
+                  style={{ border:0, display:'block', filter:'hue-rotate(250deg) saturate(0.6) brightness(0.75)' }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
+              <a
+                href="https://www.google.com/maps/place/Friends+fitness+club/@21.139444,78.948591,17z"
+                target="_blank"
+                rel="noreferrer"
+                style={{ display:'flex', alignItems:'center', gap:8, marginTop:10, fontSize:12, color:'#9c59f7', textDecoration:'none', fontWeight:600 }}
+              >
+                <span>📍</span> Open in Google Maps →
+              </a>
 
               <div style={{ display:'flex', gap:12, marginTop:20 }}>
                 <a href="https://www.instagram.com/friends_fitness.club" target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ padding:'10px 22px', fontSize:13 }}>Instagram</a>
