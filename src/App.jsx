@@ -9,10 +9,19 @@ import Store     from './pages/Store.jsx'
 import Contact   from './pages/Contact.jsx'
 import Exercises from './pages/Exercises.jsx'
 import AdminPage from './pages/AdminPage.jsx'
+import KioskPage from './pages/KioskPage.jsx'
 
 function Layout() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
+  const isKiosk = pathname.startsWith('/kiosk')
+
+  // Kiosk gets full screen with no navbar/footer
+  if (isKiosk) return (
+    <Routes>
+      <Route path="/kiosk" element={<KioskPage />} />
+    </Routes>
+  )
 
   return (
     <>
