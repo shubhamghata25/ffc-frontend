@@ -3,19 +3,39 @@ import AdminStore     from '../admin/AdminStore.jsx'
 import AdminExercises from '../admin/AdminExercises.jsx'
 import AdminPricing   from '../admin/AdminPricing.jsx'
 
-const ADMIN_USER = 'admin'
-const ADMIN_PASS = 'gym@admin123'
-const API        = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-const ADMIN_KEY  = import.meta.env.VITE_ADMIN_SECRET || 'ffc-admin-secret-2026'
-const PLANS      = ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999']
-const uid        = () => Math.random().toString(36).slice(2,9)
+// ─── SECURITY NOTES ───────────────────────────────────────────────────────────
+// 1. NO hardcoded credentials. Login is verified server-side via bcrypt.
+// 2. JWT token is stored in React state (memory only) — NOT localStorage.
+//    This means it vanishes on page refresh (user must re-login), which is
+//    correct and safe for an admin panel.
+// 3. VITE_ADMIN_SECRET env var has been REMOVED entirely. The frontend
+//    never holds a shared secret. Only the JWT issued after login is used.
+// 4. All admin API calls send `Authorization: Bearer <token>`.
+// ─────────────────────────────────────────────────────────────────────────────
 
-async function apiFetch(path, method='GET', body=null) {
-  const opts = { method, headers:{'Content-Type':'application/json','x-admin-key':ADMIN_KEY} }
-  if (body) opts.body = JSON.stringify(body)
-  const res = await fetch(`${API}${path}`, opts)
-  if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`)
-  return res.json()
+const API   = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const PLANS = ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999']
+const uid   = () => Math.random().toString(36).slice(2,9)
+
+// apiFetch is built at runtime with the current JWT from state (passed as prop)
+function makeApiFetch(token) {
+  return async function apiFetch(path, method='GET', body=null) {
+    const opts = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+    if (body) opts.body = JSON.stringify(body)
+    const res = await fetch(`${API}${path}`, opts)
+    if (res.status === 401) {
+      // Token expired — bubble up so AdminPage can force logout
+      throw Object.assign(new Error('Session expired'), { status: 401 })
+    }
+    if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`)
+    return res.json()
+  }
 }
 
 function fileToBase64(file) {
@@ -42,10 +62,14 @@ function resizeImage(dataUrl, maxW=800, quality=0.78) {
   })
 }
 
-async function uploadImageToCloud(base64, folder='ffc') {
+// uploadImageToCloud needs the token at call time — receives it as arg
+async function uploadImageToCloud(token, base64, folder='ffc') {
   const res = await fetch(`${API}/api/upload`, {
     method: 'POST',
-    headers: { 'Content-Type':'application/json', 'x-admin-key': ADMIN_KEY },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
     body: JSON.stringify({ image: base64, folder }),
   })
   if (!res.ok) {
@@ -103,8 +127,8 @@ const Badge = ({ label, color }) => {
   return <span style={{display:'inline-block',padding:'3px 11px',borderRadius:20,fontSize:11,fontWeight:700,background:bg,color:fg}}>{label}</span>
 }
 
-const Card = ({ children, style:s={} }) => (
-  <div style={{background:'#130f24',borderRadius:16,border:'1px solid #2a2347',overflow:'hidden',...s}}>{children}</div>
+const Card = ({ children, style:s={}, className='' }) => (
+  <div className={className} style={{background:'#130f24',borderRadius:16,border:'1px solid #2a2347',overflow:'hidden',...s}}>{children}</div>
 )
 
 const Modal = ({ title, children, onClose, wide=false }) => (
@@ -149,7 +173,8 @@ function Toast({ msg, type }) {
   )
 }
 
-function ImageUploader({ value, onChange, label='Upload Image', hint='', maxW=800, aspect='wide' }) {
+// ImageUploader receives token as prop to pass to uploadImageToCloud
+function ImageUploader({ token, value, onChange, label='Upload Image', hint='', maxW=800, aspect='wide' }) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [drag, setDrag] = useState(false)
@@ -162,7 +187,7 @@ function ImageUploader({ value, onChange, label='Upload Image', hint='', maxW=80
     try {
       const base64 = await fileToBase64(file)
       const resized = await resizeImage(base64, maxW, aspect==='square' ? 0.8 : 0.78)
-      const cloudUrl = await uploadImageToCloud(resized, 'ffc')
+      const cloudUrl = await uploadImageToCloud(token, resized, 'ffc')
       onChange(cloudUrl)
     } catch (e) { setUploadError(e.message || 'Upload failed. Try again.') }
     setUploading(false)
@@ -187,7 +212,7 @@ function ImageUploader({ value, onChange, label='Upload Image', hint='', maxW=80
   )
 }
 
-/* ══ TASK 2: QR CODE DISPLAY ══ */
+/* ── QR CODE DISPLAY ── */
 function QRCodeDisplay({ member }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
@@ -233,8 +258,8 @@ function QRCodeDisplay({ member }) {
   )
 }
 
-/* ══ TASK 2: QR SCANNER ══ */
-function QRScanner({ onSuccess }) {
+/* ── QR SCANNER ── */
+function QRScanner({ apiFetch, onSuccess }) {
   const videoRef  = useRef(null)
   const canvasRef = useRef(null)
   const rafRef    = useRef(null)
@@ -334,8 +359,8 @@ function QRScanner({ onSuccess }) {
   )
 }
 
-/* ══ TASK 3: EXPIRY ALERTS ══ */
-function ExpiryAlerts({ onNavigate }) {
+/* ── EXPIRY ALERTS ── */
+function ExpiryAlerts({ apiFetch, onNavigate }) {
   const [expiring, setExpiring] = useState([])
   const [loading, setLoading]   = useState(true)
 
@@ -379,9 +404,31 @@ function ExpiryAlerts({ onNavigate }) {
   )
 }
 
+/* ── LOGIN PAGE (server-side auth) ── */
 function LoginPage({ onLogin }) {
-  const [u,setU]=useState(''); const [p,setP]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
-  const handle = () => { setLoading(true); setErr(''); setTimeout(()=>{ if(u===ADMIN_USER&&p===ADMIN_PASS) onLogin(); else{setErr('Invalid credentials');setLoading(false)} },700) }
+  const [p,setP]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
+
+  const handle = async () => {
+    if (!p) return
+    setLoading(true); setErr('')
+    try {
+      const res = await fetch(`${API}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: p }),
+      })
+      const data = await res.json()
+      if (res.ok && data.token) {
+        onLogin(data.token)
+      } else {
+        setErr(data.error || 'Invalid credentials')
+      }
+    } catch {
+      setErr('Cannot reach server. Check your connection.')
+    }
+    setLoading(false)
+  }
+
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'radial-gradient(ellipse at 60% 40%,rgba(124,58,237,0.15) 0%,#06050f 65%)',padding:16}}>
       <div className="adm-fade" style={{width:'100%',maxWidth:380,textAlign:'center'}}>
@@ -389,18 +436,28 @@ function LoginPage({ onLogin }) {
         <div style={{fontSize:11,color:'#6b6490',letterSpacing:3,marginBottom:36}}>ADMIN PORTAL</div>
         <Card style={{padding:36}}>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,marginBottom:24}}>SIGN IN</div>
-          <FR label="Username"><input style={inp} placeholder="admin" value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></FR>
-          <FR label="Password"><input style={inp} type="password" placeholder="••••••••" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></FR>
+          <FR label="Password">
+            <input
+              style={inp}
+              type="password"
+              placeholder="••••••••"
+              value={p}
+              onChange={e=>setP(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&handle()}
+              autoFocus
+            />
+          </FR>
           {err&&<p style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'left'}}>⚠ {err}</p>}
-          <Btn onClick={handle} disabled={loading} style={{width:'100%',justifyContent:'center',marginTop:8}}>{loading?<Spinner/>:'Login →'}</Btn>
-          <p style={{fontSize:11,color:'#6b6490',marginTop:14}}>admin / gym@admin123</p>
+          <Btn onClick={handle} disabled={loading} style={{width:'100%',justifyContent:'center',marginTop:8}}>
+            {loading?<Spinner/>:'Login →'}
+          </Btn>
         </Card>
       </div>
     </div>
   )
 }
 
-function Dashboard({ members, products, leads, offers, onNavigate }) {
+function Dashboard({ apiFetch, members, products, leads, offers, onNavigate }) {
   const active  = members.filter(m=>m.status==='Active').length
   const unpaid  = members.filter(m=>m.fee==='Unpaid').length
   const revenue = members.filter(m=>m.fee==='Paid').reduce((s,m)=>{ const n=parseInt(m.plan.replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
@@ -417,7 +474,7 @@ function Dashboard({ members, products, leads, offers, onNavigate }) {
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:6}}>DASHBOARD</h2>
       <p style={{color:'#6b6490',fontSize:14,marginBottom:24}}>Welcome back, Admin 👋 — {new Date().toDateString()}</p>
-      <ExpiryAlerts onNavigate={onNavigate}/>
+      <ExpiryAlerts apiFetch={apiFetch} onNavigate={onNavigate}/>
       {liveOffer&&<div style={{marginBottom:20,padding:'14px 18px',borderRadius:12,background:'rgba(124,58,237,0.1)',border:'1px solid #7c3aed',fontSize:14,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         {liveOffer.poster&&<img src={liveOffer.poster} alt="" style={{width:48,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}}/>}
         <div><strong style={{color:'#7c3aed'}}>🔴 LIVE on website:</strong> {liveOffer.title}</div>
@@ -461,7 +518,7 @@ function Dashboard({ members, products, leads, offers, onNavigate }) {
   )
 }
 
-function Members({ members, reload, toast }) {
+function Members({ apiFetch, token, members, reload, toast }) {
   const [modal,setModal]=useState(null); const [search,setSearch]=useState(''); const [saving,setSaving]=useState(false); const [qrMember,setQrMember]=useState(null)
   const blank={name:'',phone:'',plan:PLANS[0],joined:new Date().toISOString().slice(0,10),endDate:'',status:'Active',fee:'Unpaid'}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
@@ -548,7 +605,7 @@ function Members({ members, reload, toast }) {
   )
 }
 
-function Attendance({ reload, toast }) {
+function Attendance({ apiFetch, reload, toast }) {
   const [todayLog,setTodayLog] = useState([])
   const [loadingLog,setLoadingLog] = useState(true)
   const [tab,setTab] = useState('scan')
@@ -580,7 +637,7 @@ function Attendance({ reload, toast }) {
               Open a member's QR code and point the camera at it.<br/>
               Each member can check in <strong style={{color:'#7c3aed'}}>once per day</strong>.
             </p>
-            <QRScanner onSuccess={()=>{ loadLog(); toast('Attendance marked!','ok') }}/>
+            <QRScanner apiFetch={apiFetch} onSuccess={()=>{ loadLog(); toast('Attendance marked!','ok') }}/>
           </Card>
           <div style={{background:'rgba(124,58,237,0.06)',border:'1px solid #2a2347',borderRadius:12,padding:'14px 18px',fontSize:13,color:'#6b6490',lineHeight:1.7}}>
             💡 Go to <strong style={{color:'#f0eeff'}}>Members</strong> → tap <strong style={{color:'#7c3aed'}}>QR</strong> next to any member to view and download their QR code.
@@ -624,13 +681,14 @@ function Attendance({ reload, toast }) {
   )
 }
 
-function Offers({ offers, reload, toast }) {
+function Offers({ apiFetch, token, offers, reload, toast }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
   const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.title)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/offers','POST',form);else await apiFetch(`/api/admin/offers/${modal.id}`,'PUT',form);await reload();toast('Offer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const toggle=async o=>{const u={...o,status:o.status==='ON'?'OFF':'ON'};try{await apiFetch(`/api/admin/offers/${o.id}`,'PUT',u);await reload();toast(u.status==='ON'?'🔴 Offer is LIVE!':'Offer deactivated','ok')}catch{toast('Update failed','err')}}
   const del=async id=>{try{await apiFetch(`/api/admin/offers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
+  const IU = (props) => <ImageUploader token={token} {...props}/>
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:12}}>
@@ -668,7 +726,7 @@ function Offers({ offers, reload, toast }) {
               <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option value="OFF">OFF – Hidden</option><option value="ON">ON – Live on homepage</option></select></FR>
             </div>
             <div>
-              <ImageUploader value={form.poster} onChange={v=>set('poster',v)} label="Offer Poster" hint="1200×400px recommended." maxW={1200} aspect="wide"/>
+              <IU value={form.poster} onChange={v=>set('poster',v)} label="Offer Poster" hint="1200×400px recommended." maxW={1200} aspect="wide"/>
               {form.poster&&<div style={{fontSize:12,color:'#22c55e',marginTop:-8,marginBottom:8}}>✅ Poster uploaded</div>}
             </div>
           </div>
@@ -682,7 +740,7 @@ function Offers({ offers, reload, toast }) {
   )
 }
 
-function Leads({ leads, reload, toast }) {
+function Leads({ apiFetch, leads, reload, toast }) {
   const [search,setSearch]=useState('')
   const filtered=leads.filter(l=>l.name.toLowerCase().includes(search.toLowerCase())||l.phone.includes(search))
   const wa=(phone,name)=>window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hello ${name}! Thank you for contacting Friends Fitness Club.`)}`, '_blank')
@@ -726,12 +784,13 @@ function Leads({ leads, reload, toast }) {
   )
 }
 
-function Trainers({ trainers, reload, toast }) {
+function Trainers({ apiFetch, token, trainers, reload, toast }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
   const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.name)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/trainers','POST',form);else await apiFetch(`/api/admin/trainers/${modal.id}`,'PUT',form);await reload();toast('Trainer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const del=async id=>{try{await apiFetch(`/api/admin/trainers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
+  const IU = (props) => <ImageUploader token={token} {...props}/>
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:26,flexWrap:'wrap',gap:12}}>
@@ -761,7 +820,7 @@ function Trainers({ trainers, reload, toast }) {
               <FR label="Specialization"><input style={inp} value={form.spec||''} onChange={e=>set('spec',e.target.value)}/></FR>
               <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option>Active</option><option>Inactive</option></select></FR>
             </div>
-            <ImageUploader value={form.photo} onChange={v=>set('photo',v)} label="Trainer Photo" hint="Square photo. Max 5MB." maxW={400} aspect="square"/>
+            <IU value={form.photo} onChange={v=>set('photo',v)} label="Trainer Photo" hint="Square photo. Max 5MB." maxW={400} aspect="square"/>
           </div>
           <div style={{display:'flex',gap:10,marginTop:16}}>
             <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Trainer'}</Btn>
@@ -773,11 +832,16 @@ function Trainers({ trainers, reload, toast }) {
   )
 }
 
-function Settings({ onLogout }) {
+function Settings({ apiFetch, onLogout }) {
   const [saved,setSaved]=useState(false)
   const [syncing,setSyncing]=useState(false)
   const [syncResult,setSyncResult]=useState(null)
+  const [pwForm,setPwForm]=useState({current:'',next:'',confirm:''})
+  const [pwMsg,setPwMsg]=useState(null)
+  const [pwSaving,setPwSaving]=useState(false)
+
   const save=()=>{setSaved(true);setTimeout(()=>setSaved(false),2200)}
+
   const syncSheets=async()=>{
     setSyncing(true); setSyncResult(null)
     try {
@@ -788,6 +852,20 @@ function Settings({ onLogout }) {
     setSyncing(false)
     setTimeout(()=>setSyncResult(null),5000)
   }
+
+  const changePassword = async () => {
+    if (!pwForm.current || !pwForm.next) { setPwMsg({ok:false,msg:'All fields required'}); return }
+    if (pwForm.next !== pwForm.confirm) { setPwMsg({ok:false,msg:'New passwords do not match'}); return }
+    if (pwForm.next.length < 8) { setPwMsg({ok:false,msg:'Password must be at least 8 characters'}); return }
+    setPwSaving(true); setPwMsg(null)
+    try {
+      await apiFetch('/api/admin/change-password','POST',{ currentPassword:pwForm.current, newPassword:pwForm.next })
+      setPwMsg({ok:true,msg:'Password changed! ⚠ Update ADMIN_PASSWORD_HASH in Render env vars to persist permanently.'})
+      setPwForm({current:'',next:'',confirm:''})
+    } catch(e) { setPwMsg({ok:false,msg:e.message||'Failed to change password'}) }
+    setPwSaving(false)
+  }
+
   return(
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:26}}>SETTINGS</h2>
@@ -808,9 +886,17 @@ function Settings({ onLogout }) {
           <FR label="Holiday"><input style={inp} defaultValue="Closed on Sunday"/></FR>
           <Btn onClick={save}>{saved?'✓ Saved!':'Save Timings'}</Btn>
         </Card>
+        <Card style={{padding:26,border:'1px solid rgba(124,58,237,0.3)'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#bb86fc',marginBottom:16}}>🔒 Change Password</div>
+          <FR label="Current Password"><input style={inp} type="password" value={pwForm.current} onChange={e=>setPwForm(f=>({...f,current:e.target.value}))}/></FR>
+          <FR label="New Password"><input style={inp} type="password" value={pwForm.next} onChange={e=>setPwForm(f=>({...f,next:e.target.value}))}/></FR>
+          <FR label="Confirm New Password"><input style={inp} type="password" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))}/></FR>
+          {pwMsg&&<div style={{marginBottom:12,padding:'10px 14px',borderRadius:8,background:pwMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:pwMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{pwMsg.ok?'✅':'❌'} {pwMsg.msg}</div>}
+          <Btn onClick={changePassword} disabled={pwSaving}>{pwSaving?<Spinner/>:'Update Password'}</Btn>
+        </Card>
         <Card style={{padding:26,border:'1px solid rgba(34,197,94,0.2)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#22c55e',marginBottom:10}}>📊 Google Sheets Sync</div>
-          <p style={{fontSize:13,color:'#6b6490',marginBottom:14,lineHeight:1.7}}>Sync all member data to your connected Google Sheet. Requires env vars to be set on Render.</p>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:14,lineHeight:1.7}}>Sync all member data to your connected Google Sheet.</p>
           {syncResult&&<div style={{marginBottom:12,padding:'10px 14px',borderRadius:8,background:syncResult.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:syncResult.ok?'#22c55e':'#ef4444',fontSize:13}}>{syncResult.ok?'✅':'❌'} {syncResult.msg}</div>}
           <Btn variant="success" onClick={syncSheets} disabled={syncing}>{syncing?<><Spinner size={13}/> Syncing…</>:'↑ Sync to Google Sheets'}</Btn>
         </Card>
@@ -868,8 +954,14 @@ function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose })
   )
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ROOT COMPONENT
+   - token lives in React state only (never localStorage)
+   - apiFetch is rebuilt any time the token changes
+   - 401 from any API call forces logout automatically
+   ══════════════════════════════════════════════════════════════ */
 export default function AdminPage() {
-  const [auth,setAuth]             = useState(false)
+  const [token,setToken]           = useState(null)   // JWT in memory only
   const [page,setPage]             = useState('dashboard')
   const [collapsed,setCollapsed]   = useState(false)
   const [mobileOpen,setMobileOpen] = useState(false)
@@ -883,8 +975,17 @@ export default function AdminPage() {
 
   const showToast = (msg, type='ok') => { setToastData({msg,type}); setTimeout(()=>setToastData(null),3200) }
 
+  // Build apiFetch bound to current token; auto-logout on 401
+  const apiFetch = useCallback((...args) => {
+    if (!token) return Promise.reject(new Error('Not authenticated'))
+    return makeApiFetch(token)(...args).catch(err => {
+      if (err.status === 401) { setToken(null); showToast('Session expired. Please log in again.','err') }
+      throw err
+    })
+  }, [token])
+
   const loadAll = useCallback(async () => {
-    if (!auth) return
+    if (!token) return
     setLoading(true)
     try {
       const [m,l,o,t,p] = await Promise.all([
@@ -897,33 +998,48 @@ export default function AdminPage() {
       setMembers(m); setLeads(l); setOffers(o); setTrainers(t); setProducts(p)
     } catch(e) { console.error('loadAll',e) }
     setLoading(false)
-  }, [auth])
+  }, [token])
 
   useEffect(()=>{ loadAll() }, [loadAll])
 
-  if (!auth) return <><style>{CSS}</style><LoginPage onLogin={()=>setAuth(true)}/></>
+  const handleLogout = () => { setToken(null); setPage('dashboard') }
+
+  if (!token) return (
+    <>
+      <style>{CSS}</style>
+      <LoginPage onLogin={(tok) => setToken(tok)}/>
+    </>
+  )
 
   const SL = collapsed ? 64 : 220
-  const shared = { apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast:showToast }
+
+  // Shared props injected into all sub-components
+  const shared = {
+    apiFetch,
+    token,
+    ImageUploader: (props) => <ImageUploader token={token} {...props}/>,
+    Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C,
+    toast: showToast,
+  }
 
   const PAGES = {
-    dashboard:  <Dashboard  members={members} products={products} leads={leads} offers={offers} onNavigate={setPage}/>,
-    members:    <Members    members={members} reload={loadAll} toast={showToast}/>,
-    attendance: <Attendance reload={loadAll} toast={showToast}/>,
-    offers:     <Offers     offers={offers}  reload={loadAll} toast={showToast}/>,
-    leads:      <Leads      leads={leads}    reload={loadAll} toast={showToast}/>,
-    trainers:   <Trainers   trainers={trainers} reload={loadAll} toast={showToast}/>,
+    dashboard:  <Dashboard  {...{apiFetch,members,products,leads,offers}} onNavigate={setPage}/>,
+    members:    <Members    {...{apiFetch,token,members}} reload={loadAll} toast={showToast}/>,
+    attendance: <Attendance {...{apiFetch}} reload={loadAll} toast={showToast}/>,
+    offers:     <Offers     {...{apiFetch,token,offers}} reload={loadAll} toast={showToast}/>,
+    leads:      <Leads      {...{apiFetch,leads}} reload={loadAll} toast={showToast}/>,
+    trainers:   <Trainers   {...{apiFetch,token,trainers}} reload={loadAll} toast={showToast}/>,
     store:      <AdminStore     {...shared}/>,
     pricing:    <AdminPricing   {...shared}/>,
     exercises:  <AdminExercises {...shared}/>,
-    settings:   <Settings  onLogout={()=>setAuth(false)}/>,
+    settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout}/>,
   }
 
   return (
     <>
       <style>{CSS}</style>
       <div style={{display:'flex',minHeight:'100vh',background:'#06050f',color:'#f0eeff',fontFamily:"'Poppins',sans-serif"}}>
-        <Sidebar active={page} onChange={setPage} onLogout={()=>setAuth(false)} collapsed={collapsed} mobileOpen={mobileOpen} onClose={()=>setMobileOpen(false)}/>
+        <Sidebar active={page} onChange={setPage} onLogout={handleLogout} collapsed={collapsed} mobileOpen={mobileOpen} onClose={()=>setMobileOpen(false)}/>
         <div className="adm-main" style={{marginLeft:SL,flex:1,display:'flex',flexDirection:'column',transition:'margin-left .3s',minWidth:0}}>
           <div style={{position:'sticky',top:0,zIndex:50,background:'#06050f',borderBottom:'1px solid #2a2347',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px clamp(12px,3vw,26px)',gap:8}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
