@@ -78,7 +78,7 @@ function ResultOverlay({ result, countdown }) {
   const isOk      = result.code === 'OK'
   const isAlready = result.code === 'ALREADY'
   const isExpired = result.code === 'EXPIRED'
-  const isNotFound= result.code === 'NOT_FOUND'
+  const isNotFound= result.code === 'NOT_FOUND' || result.code === 'INVALID'
 
   const bg     = isOk ? 'linear-gradient(160deg,#052e16,#14532d)' : isAlready ? 'linear-gradient(160deg,#1c1400,#3b2700)' : 'linear-gradient(160deg,#1c0606,#450a0a)'
   const border = isOk ? '#22c55e' : isAlready ? '#f59e0b' : '#ef4444'
@@ -210,7 +210,7 @@ export default function KioskPage() {
     }
 
     if (!payload.id || payload.gym !== 'FFC') {
-      showResult({ code: 'INVALID', message: 'This QR does not belong to FFC.' })
+      showResult({ code: 'NOT_FOUND', message: 'This QR is not a valid FFC membership QR. Please get your QR card from reception.' })
       return
     }
 
