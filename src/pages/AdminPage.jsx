@@ -518,87 +518,370 @@ function Dashboard({ apiFetch, members, products, leads, offers, onNavigate }) {
   )
 }
 
+// ── QR PRINT CARD — shown after walk-in registration ──────────────────────────
+// Displays a printable / shareable card with the QR code.
+// Admin can screenshot it and WhatsApp to member, or print it on paper.
+function QRPrintCard({ member, onClose, onNewMember }) {
+  const canvasRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  const payload = JSON.stringify({ id: member.id, gym: 'FFC' })
+
+  useEffect(() => {
+    import('qrcode').then(QRCode => {
+      if (canvasRef.current) {
+        QRCode.toCanvas(canvasRef.current, payload, {
+          width: 220, margin: 2,
+          color: { dark: '#ffffff', light: '#130f24' },
+        }, e => { if (!e) setReady(true) })
+      }
+    }).catch(() => {})
+  }, [payload])
+
+  const downloadQR = () => {
+    if (!canvasRef.current) return
+    // Create a nicely styled card image for download / WhatsApp sharing
+    const card = document.createElement('canvas')
+    card.width  = 480
+    card.height = 640
+    const ctx = card.getContext('2d')
+
+    // Background
+    ctx.fillStyle = '#06050f'
+    ctx.fillRect(0, 0, 480, 640)
+
+    // Purple top bar
+    const grad = ctx.createLinearGradient(0, 0, 480, 80)
+    grad.addColorStop(0, '#7c3aed')
+    grad.addColorStop(1, '#9c59f7')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, 480, 80)
+
+    // Gym name
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 32px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('FFC', 240, 38)
+    ctx.font = '13px Arial'
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'
+    ctx.fillText('FRIENDS FITNESS CLUB', 240, 62)
+
+    // QR code
+    ctx.drawImage(canvasRef.current, 130, 100, 220, 220)
+
+    // Member info
+    ctx.fillStyle = '#f0eeff'
+    ctx.font = 'bold 22px Arial'
+    ctx.fillText(member.name, 240, 360)
+
+    ctx.fillStyle = '#6b6490'
+    ctx.font = '14px Arial'
+    ctx.fillText(member.plan?.split('–')[0]?.trim() || '', 240, 388)
+    ctx.fillText(`Valid till: ${member.endDate || member.joined}`, 240, 412)
+
+    // Instruction
+    ctx.fillStyle = '#7c3aed'
+    ctx.font = 'bold 13px Arial'
+    ctx.fillText('Scan this QR at the gym entrance every day', 240, 460)
+
+    ctx.fillStyle = '#3a3460'
+    ctx.font = '11px Arial'
+    ctx.fillText('RT Complex, 2nd Floor, Wardhaman Nagar, Nagpur', 240, 490)
+    ctx.fillText('+91 84848 05154', 240, 510)
+
+    // Bottom bar
+    ctx.fillStyle = '#130f24'
+    ctx.fillRect(0, 560, 480, 80)
+    ctx.fillStyle = '#2a2347'
+    ctx.fillRect(0, 560, 480, 2)
+    ctx.fillStyle = '#6b6490'
+    ctx.font = '11px Arial'
+    ctx.fillText('Friends Fitness Club · Membership QR Card', 240, 595)
+    ctx.fillText('One scan per day · Show at entrance', 240, 615)
+
+    const a = document.createElement('a')
+    a.href     = card.toDataURL('image/png')
+    a.download = `FFC_Card_${member.name?.replace(/\s+/g, '_')}.png`
+    a.click()
+  }
+
+  const printCard = () => {
+    const w = window.open('', '_blank', 'width=500,height=700')
+    const qrSrc = canvasRef.current ? canvasRef.current.toDataURL() : ''
+    w.document.write(`
+      <html><head><title>FFC Membership Card</title>
+      <style>
+        body{margin:0;background:#06050f;color:#f0eeff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+        .card{background:#130f24;border:1px solid #2a2347;border-radius:20px;width:340px;overflow:hidden;text-align:center;}
+        .top{background:linear-gradient(135deg,#7c3aed,#9c59f7);padding:24px;color:#fff;}
+        .top h1{margin:0;font-size:36px;letter-spacing:4px;}
+        .top p{margin:4px 0 0;font-size:11px;opacity:.8;letter-spacing:2px;}
+        .body{padding:28px 24px;}
+        .qr{border-radius:12px;display:block;margin:0 auto 18px;}
+        .name{font-size:22px;font-weight:700;margin-bottom:4px;}
+        .plan{font-size:13px;color:#6b6490;margin-bottom:4px;}
+        .validity{font-size:13px;color:#f59e0b;margin-bottom:18px;}
+        .inst{background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:10px;padding:12px;font-size:12px;color:#bb86fc;line-height:1.6;}
+        .footer{padding:14px;border-top:1px solid #2a2347;font-size:11px;color:#3a3460;}
+        @media print{body{background:#fff;}  .card{border:1px solid #ccc;background:#fff;color:#000;} .top{background:#7c3aed;} .inst{background:#f3f0ff;color:#7c3aed;border-color:#7c3aed;} .footer,.plan,.validity{color:#666;} }
+      </style></head><body>
+      <div class="card">
+        <div class="top"><h1>FFC</h1><p>FRIENDS FITNESS CLUB</p></div>
+        <div class="body">
+          <img src="${qrSrc}" class="qr" width="200" height="200"/>
+          <div class="name">${member.name}</div>
+          <div class="plan">${member.plan?.split('–')[0]?.trim() || ''}</div>
+          <div class="validity">Valid till: ${member.endDate || member.joined}</div>
+          <div class="inst">📲 Show this QR at the gym entrance every day to mark your attendance.<br/>One scan per day.</div>
+        </div>
+        <div class="footer">RT Complex, 2nd Floor, Wardhaman Nagar, Nagpur · +91 84848 05154</div>
+      </div>
+      <script>setTimeout(()=>window.print(),600)</script>
+      </body></html>
+    `)
+    w.document.close()
+  }
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      {/* Success banner */}
+      <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid #22c55e', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
+        <div style={{ fontSize: 32, marginBottom: 6 }}>🎉</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: '#22c55e', marginBottom: 4 }}>Member Registered Successfully!</div>
+        <div style={{ fontSize: 13, color: '#6b6490' }}>{member.name} · {member.plan?.split('–')[0]?.trim()}</div>
+      </div>
+
+      {/* QR Card preview */}
+      <div style={{ background: '#0d0b1a', border: '1px solid #2a2347', borderRadius: 18, padding: 24, marginBottom: 20, display: 'inline-block', minWidth: 260 }}>
+        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, letterSpacing: 4, background: 'linear-gradient(135deg,#bb86fc,#7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', marginBottom: 4 }}>FFC</div>
+        <div style={{ fontSize: 10, color: '#6b6490', letterSpacing: 2, marginBottom: 18 }}>MEMBERSHIP CARD</div>
+        <canvas ref={canvasRef} style={{ borderRadius: 10, display: 'block', margin: '0 auto 16px', border: '2px solid #7c3aed' }}/>
+        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 3 }}>{member.name}</div>
+        <div style={{ fontSize: 13, color: '#6b6490', marginBottom: 2 }}>{member.plan?.split('–')[0]?.trim()}</div>
+        <div style={{ fontSize: 12, color: '#f59e0b' }}>Valid till: {member.endDate || member.joined}</div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <Btn onClick={downloadQR} disabled={!ready} style={{ justifyContent: 'center', fontSize: 13 }}>
+          📥 Download Card
+        </Btn>
+        <Btn onClick={printCard} disabled={!ready} variant="muted" style={{ justifyContent: 'center', fontSize: 13 }}>
+          🖨️ Print Card
+        </Btn>
+      </div>
+
+      <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10, padding: '12px 16px', fontSize: 12, color: '#9d8ec7', lineHeight: 1.8, marginBottom: 16, textAlign: 'left' }}>
+        <strong style={{ color: '#bb86fc' }}>No mobile? No problem:</strong><br/>
+        📥 Download → WhatsApp the card image to the member<br/>
+        🖨️ Print → hand the physical card to the member<br/>
+        📷 Screenshot → show on screen, member takes a photo
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn onClick={onNewMember} style={{ flex: 1, justifyContent: 'center' }}>+ Register Another Member</Btn>
+        <Btn variant="muted" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>Done</Btn>
+      </div>
+    </div>
+  )
+}
+
 function Members({ apiFetch, token, members, reload, toast }) {
-  const [modal,setModal]=useState(null); const [search,setSearch]=useState(''); const [saving,setSaving]=useState(false); const [qrMember,setQrMember]=useState(null)
-  const blank={name:'',phone:'',plan:PLANS[0],joined:new Date().toISOString().slice(0,10),endDate:'',status:'Active',fee:'Unpaid'}
-  const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
-  const filtered=members.filter(m=>m.name.toLowerCase().includes(search.toLowerCase())||m.phone.includes(search))
-  const save=async()=>{
-    if(!form.name||!form.phone)return; setSaving(true)
-    try{ if(modal==='add')await apiFetch('/api/admin/members','POST',form); else await apiFetch(`/api/admin/members/${modal.id}`,'PUT',form); await reload(); toast('Member saved!','ok'); setModal(null) }catch{toast('Save failed','err')}
+  const [modal,    setModal]    = useState(null)
+  const [search,   setSearch]   = useState('')
+  const [saving,   setSaving]   = useState(false)
+  const [qrMember, setQrMember] = useState(null)
+  const [newMember,setNewMember]= useState(null)   // shown after walk-in registration
+
+  // Plan period → days map for auto end-date calculation
+  const PERIOD_DAYS = { 'Monthly':30, 'Quarterly':91, 'Half Yearly':182, 'Yearly':365 }
+
+  const blank = { name:'', phone:'', email:'', plan:PLANS[0], joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid' }
+  const [form, setForm] = useState(blank)
+  const set = (k, v) => {
+    setForm(f => {
+      const updated = { ...f, [k]: v }
+      // Auto-calculate end date when plan or join date changes
+      if (k === 'plan' || k === 'joined') {
+        const label   = (k === 'plan' ? v : updated.plan).split(/[–-]/)[0].trim()
+        const days    = PERIOD_DAYS[label]
+        const joinStr = k === 'joined' ? v : updated.joined
+        if (days && joinStr) {
+          const end = new Date(new Date(joinStr).getTime() + days * 86400000)
+          updated.endDate = end.toISOString().slice(0, 10)
+        }
+      }
+      return updated
+    })
+  }
+
+  const filtered = members.filter(m =>
+    m.name.toLowerCase().includes(search.toLowerCase()) || m.phone.includes(search)
+  )
+
+  const save = async () => {
+    if (!form.name || !form.phone) { toast('Name and phone are required','err'); return }
+    setSaving(true)
+    try {
+      if (modal === 'add') {
+        const created = await apiFetch('/api/admin/members', 'POST', form)
+        await reload()
+        toast('Member registered! 🎉', 'ok')
+        setModal(null)
+        // Show QR print card immediately after walk-in registration
+        setNewMember({ ...form, id: created.id || created._id || created._uid })
+      } else {
+        await apiFetch(`/api/admin/members/${modal.id}`, 'PUT', form)
+        await reload()
+        toast('Member updated!', 'ok')
+        setModal(null)
+      }
+    } catch { toast('Save failed', 'err') }
     setSaving(false)
   }
-  const del=async id=>{if(!confirm('Delete this member?'))return; try{await apiFetch(`/api/admin/members/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
-  return(
+
+  const del = async id => {
+    if (!confirm('Delete this member?')) return
+    try { await apiFetch(`/api/admin/members/${id}`, 'DELETE'); await reload(); toast('Deleted', 'ok') }
+    catch { toast('Failed', 'err') }
+  }
+
+  return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>MEMBERS</h2>
-        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          <input style={{...inp,width:'min(220px,100%)'}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
-          <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Member</Btn>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+        <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, letterSpacing:2 }}>MEMBERS</h2>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <input style={{ ...inp, width:'min(220px,100%)' }} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
+          <Btn onClick={()=>{ setForm(blank); setModal('add') }}>+ Walk-in Register</Btn>
         </div>
       </div>
+
+      {/* Walk-in tip banner */}
+      <div style={{ background:'rgba(124,58,237,0.07)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:12, padding:'12px 18px', marginBottom:20, fontSize:13, color:'#9d8ec7', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+        <span style={{ fontSize:20 }}>💡</span>
+        <span><strong style={{ color:'#bb86fc' }}>No mobile / no internet?</strong> Register the member here → a QR card is instantly generated → download it, print it, or WhatsApp it to the member.</span>
+      </div>
+
       <Card className="adm-table-desktop">
-        <Table heads={['Name','Phone','Plan','Joined','Status','Fee','Actions']} empty={filtered.length===0?'No members found':''}>
+        <Table heads={['Name','Phone','Plan','Joined','Expires','Status','Fee','Actions']} empty={filtered.length===0?'No members found':''}>
           {filtered.map(m=>(
             <tr key={m.id} className="adm-row">
-              <Td style={{fontWeight:500}}>{m.name}</Td><Td style={{color:'#6b6490',fontSize:13}}>{m.phone}</Td>
-              <Td style={{fontSize:13}}>{m.plan.split('–')[0].trim()}</Td><Td style={{color:'#6b6490',fontSize:13}}>{m.joined}</Td>
+              <Td style={{fontWeight:500}}>{m.name}</Td>
+              <Td style={{color:'#6b6490',fontSize:13}}>{m.phone}</Td>
+              <Td style={{fontSize:13}}>{m.plan.split('–')[0].trim()}</Td>
+              <Td style={{color:'#6b6490',fontSize:13}}>{m.joined}</Td>
+              <Td style={{color: m.endDate && m.endDate < new Date().toISOString().slice(0,10) ? '#ef4444' : '#f59e0b', fontSize:13}}>{m.endDate || '—'}</Td>
               <Td><Badge label={m.status} color={m.status==='Active'?'green':'red'}/></Td>
               <Td><Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/></Td>
               <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}}>Edit</Btn>
-                <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>QR</Btn>
+                <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>🪪 Card</Btn>
                 <Btn size="sm" variant="danger" onClick={()=>del(m.id)}>Del</Btn>
               </div></Td>
             </tr>
           ))}
         </Table>
       </Card>
+
+      {/* Mobile cards */}
       <div className="member-card">
-        {filtered.length===0?<p style={{textAlign:'center',color:'#6b6490',padding:40}}>No members found</p>
-          :filtered.map(m=>(
-          <Card key={m.id} style={{marginBottom:12,padding:18}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,gap:8}}>
-              <div><p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{m.name}</p><p style={{fontSize:13,color:'#6b6490'}}>{m.phone}</p></div>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
-                <Badge label={m.status} color={m.status==='Active'?'green':'red'}/>
-                <Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/>
+        {filtered.length===0
+          ? <p style={{textAlign:'center',color:'#6b6490',padding:40}}>No members found</p>
+          : filtered.map(m=>(
+            <Card key={m.id} style={{marginBottom:12,padding:18}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,gap:8}}>
+                <div>
+                  <p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{m.name}</p>
+                  <p style={{fontSize:13,color:'#6b6490'}}>{m.phone}</p>
+                </div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
+                  <Badge label={m.status} color={m.status==='Active'?'green':'red'}/>
+                  <Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/>
+                </div>
               </div>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
-              <div><span style={{color:'#6b6490'}}>Plan: </span><span>{m.plan.split('–')[0].trim()}</span></div>
-              <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
-              <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>QR</Btn>
-              <Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
-            </div>
-          </Card>
-        ))}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
+                <div><span style={{color:'#6b6490'}}>Plan: </span><span>{m.plan.split('–')[0].trim()}</span></div>
+                <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
+                <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+                <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>🪪 Card</Btn>
+                <Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
+              </div>
+            </Card>
+          ))
+        }
       </div>
-      {modal&&(
-        <Modal title={modal==='add'?'Add Member':'Edit Member'} onClose={()=>setModal(null)}>
-          <FR label="Full Name *"><input style={inp} value={form.name} onChange={e=>set('name',e.target.value)}/></FR>
-          <FR label="Phone *"><input style={inp} value={form.phone} onChange={e=>set('phone',e.target.value)}/></FR>
-          <FR label="Plan"><select style={inp} value={form.plan} onChange={e=>set('plan',e.target.value)}>{PLANS.map(p=><option key={p}>{p}</option>)}</select></FR>
-          <FR label="Joined"><input style={inp} type="date" value={form.joined} onChange={e=>set('joined',e.target.value)}/></FR>
-          <FR label="Membership End Date"><input style={inp} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)} placeholder="Auto-calculated if blank"/></FR>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-            <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option>Active</option><option>Inactive</option></select></FR>
-            <FR label="Fee"><select style={inp} value={form.fee} onChange={e=>set('fee',e.target.value)}><option>Paid</option><option>Unpaid</option></select></FR>
+
+      {/* Add / Edit modal */}
+      {modal && (
+        <Modal title={modal==='add' ? '🏋 Walk-in Registration' : 'Edit Member'} onClose={()=>setModal(null)} wide>
+          {modal==='add' && (
+            <div style={{background:'rgba(34,197,94,0.07)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:18,fontSize:13,color:'#6b9e7a',lineHeight:1.7}}>
+              ✅ Fill the form and click <strong>Register</strong> — a QR membership card is generated instantly. No mobile or internet needed by the member.
+            </div>
+          )}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            <FR label="Full Name *"><input style={inp} value={form.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Rahul Sharma" autoFocus/></FR>
+            <FR label="Phone *"><input style={inp} value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="10-digit mobile number" type="tel"/></FR>
           </div>
-          <div style={{display:'flex',gap:10,marginTop:8}}>
-            <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save'}</Btn>
+          <FR label="Email (optional — for QR email delivery)">
+            <input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} placeholder="member@email.com" type="email"/>
+          </FR>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            <FR label="Plan">
+              <select style={inp} value={form.plan} onChange={e=>set('plan',e.target.value)}>
+                {PLANS.map(p=><option key={p}>{p}</option>)}
+              </select>
+            </FR>
+            <FR label="Join Date">
+              <input style={inp} type="date" value={form.joined} onChange={e=>set('joined',e.target.value)}/>
+            </FR>
+          </div>
+          <FR label="Membership End Date">
+            <input style={{...inp, color:'#f59e0b'}} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/>
+            <div style={{fontSize:11,color:'#6b6490',marginTop:4}}>✨ Auto-calculated from plan. You can override it.</div>
+          </FR>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <FR label="Status">
+              <select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}>
+                <option>Active</option><option>Inactive</option>
+              </select>
+            </FR>
+            <FR label="Fee">
+              <select style={inp} value={form.fee} onChange={e=>set('fee',e.target.value)}>
+                <option>Paid</option><option>Unpaid</option>
+              </select>
+            </FR>
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={save} disabled={saving} style={{flex:2,justifyContent:'center',fontSize:15}}>
+              {saving ? <Spinner/> : modal==='add' ? '🪪 Register & Generate Card' : '💾 Save Changes'}
+            </Btn>
             <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
           </div>
         </Modal>
       )}
-      {qrMember&&(
-        <Modal title={`QR – ${qrMember.name}`} onClose={()=>setQrMember(null)}>
-          <QRCodeDisplay member={qrMember}/>
-          <p style={{fontSize:12,color:'#6b6490',textAlign:'center',marginTop:10}}>Member scans this QR once per day to mark attendance.</p>
+
+      {/* QR card viewer for existing members */}
+      {qrMember && (
+        <Modal title={`🪪 Membership Card — ${qrMember.name}`} onClose={()=>setQrMember(null)} wide>
+          <QRPrintCard
+            member={qrMember}
+            onClose={()=>setQrMember(null)}
+            onNewMember={()=>{ setQrMember(null); setForm(blank); setModal('add') }}
+          />
+        </Modal>
+      )}
+
+      {/* Auto-shown after walk-in registration */}
+      {newMember && (
+        <Modal title="🎉 Registration Complete" onClose={()=>setNewMember(null)} wide>
+          <QRPrintCard
+            member={newMember}
+            onClose={()=>setNewMember(null)}
+            onNewMember={()=>{ setNewMember(null); setForm(blank); setModal('add') }}
+          />
         </Modal>
       )}
     </div>
