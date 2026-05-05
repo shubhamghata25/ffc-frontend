@@ -406,20 +406,23 @@ function ExpiryAlerts({ apiFetch, onNavigate }) {
 
 /* ── LOGIN PAGE (server-side auth) ── */
 function LoginPage({ onLogin }) {
-  const [p,setP]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
+  const [u,setU]=useState(''); const [p,setP]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
+  const [tab,setTab]=useState('main') // 'main' | 'staff'
 
   const handle = async () => {
     if (!p) return
+    if (tab==='staff' && !u) { setErr('Username required for staff login'); return }
     setLoading(true); setErr('')
     try {
+      const body = tab==='main' ? { password: p } : { username: u.trim(), password: p }
       const res = await fetch(`${API}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: p }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && data.token) {
-        onLogin(data.token)
+        onLogin(data.token, data.role || 'admin', data.username || 'admin')
       } else {
         setErr(data.error || 'Invalid credentials')
       }
@@ -429,13 +432,31 @@ function LoginPage({ onLogin }) {
     setLoading(false)
   }
 
+  const TabBtn = ({id,label}) => (
+    <button onClick={()=>{setTab(id);setErr('')}} style={{flex:1,padding:'9px 0',background:tab===id?'rgba(124,58,237,0.2)':'transparent',border:'none',borderRadius:8,color:tab===id?'#bb86fc':'#6b6490',fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:"'Poppins',sans-serif",transition:'all .2s'}}>
+      {label}
+    </button>
+  )
+
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'radial-gradient(ellipse at 60% 40%,rgba(124,58,237,0.15) 0%,#06050f 65%)',padding:16}}>
-      <div className="adm-fade" style={{width:'100%',maxWidth:380,textAlign:'center'}}>
+      <div className="adm-fade" style={{width:'100%',maxWidth:400,textAlign:'center'}}>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:52,letterSpacing:4,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'glow 2.5s infinite',marginBottom:4}}>FFC</div>
-        <div style={{fontSize:11,color:'#6b6490',letterSpacing:3,marginBottom:36}}>ADMIN PORTAL</div>
-        <Card style={{padding:36}}>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,marginBottom:24}}>SIGN IN</div>
+        <div style={{fontSize:11,color:'#6b6490',letterSpacing:3,marginBottom:32}}>ADMIN PORTAL</div>
+        <Card style={{padding:32}}>
+          {/* Tab selector */}
+          <div style={{display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:10,marginBottom:24,border:'1px solid #2a2347'}}>
+            <TabBtn id="main"  label="🔐 Main Admin"/>
+            <TabBtn id="staff" label="👤 Staff Login"/>
+          </div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:2,marginBottom:20,color:tab==='main'?'#7c3aed':'#9c59f7'}}>
+            {tab==='main'?'OWNER / MAIN ADMIN':'STAFF ACCOUNT'}
+          </div>
+          {tab==='staff'&&(
+            <FR label="Username">
+              <input style={inp} value={u} onChange={e=>setU(e.target.value)} placeholder="e.g. staff1" autoFocus onKeyDown={e=>e.key==='Enter'&&handle()}/>
+            </FR>
+          )}
           <FR label="Password">
             <input
               style={inp}
@@ -444,9 +465,12 @@ function LoginPage({ onLogin }) {
               value={p}
               onChange={e=>setP(e.target.value)}
               onKeyDown={e=>e.key==='Enter'&&handle()}
-              autoFocus
+              autoFocus={tab==='main'}
             />
           </FR>
+          {tab==='staff'&&<div style={{marginBottom:12,padding:'9px 14px',borderRadius:8,background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.2)',fontSize:12,color:'#9d8ec7',textAlign:'left',lineHeight:1.6}}>
+            👤 Staff accounts have restricted access. Revenue, Expenses, and Staff Salary sections are visible to main admin only.
+          </div>}
           {err&&<p style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'left'}}>⚠ {err}</p>}
           <Btn onClick={handle} disabled={loading} style={{width:'100%',justifyContent:'center',marginTop:8}}>
             {loading?<Spinner/>:'Login →'}
@@ -457,7 +481,7 @@ function LoginPage({ onLogin }) {
   )
 }
 
-function Dashboard({ apiFetch, members, products, leads, offers, onNavigate }) {
+function Dashboard({ apiFetch, members, products, leads, offers, onNavigate, isMainAdmin, adminUser }) {
   const active  = members.filter(m=>m.status==='Active').length
   const unpaid  = members.filter(m=>m.fee==='Unpaid').length
   const revenue = members.filter(m=>m.fee==='Paid').reduce((s,m)=>{ const n=parseInt(m.plan.replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
@@ -473,7 +497,7 @@ function Dashboard({ apiFetch, members, products, leads, offers, onNavigate }) {
   return (
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:6}}>DASHBOARD</h2>
-      <p style={{color:'#6b6490',fontSize:14,marginBottom:24}}>Welcome back, Admin 👋 — {new Date().toDateString()}</p>
+      <p style={{color:'#6b6490',fontSize:14,marginBottom:24}}>Welcome back, <strong style={{color:'#f0eeff'}}>{adminUser||'Admin'}</strong> {isMainAdmin?'👑':'👤'} — {new Date().toDateString()}</p>
       <ExpiryAlerts apiFetch={apiFetch} onNavigate={onNavigate}/>
       {liveOffer&&<div style={{marginBottom:20,padding:'14px 18px',borderRadius:12,background:'rgba(124,58,237,0.1)',border:'1px solid #7c3aed',fontSize:14,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         {liveOffer.poster&&<img src={liveOffer.poster} alt="" style={{width:48,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}}/>}
@@ -1115,7 +1139,7 @@ function Trainers({ apiFetch, token, trainers, reload, toast }) {
   )
 }
 
-function Settings({ apiFetch, onLogout }) {
+function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin' }) {
   const [saved,setSaved]=useState(false)
   const [syncing,setSyncing]=useState(false)
   const [syncResult,setSyncResult]=useState(null)
@@ -1183,9 +1207,25 @@ function Settings({ apiFetch, onLogout }) {
           {syncResult&&<div style={{marginBottom:12,padding:'10px 14px',borderRadius:8,background:syncResult.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:syncResult.ok?'#22c55e':'#ef4444',fontSize:13}}>{syncResult.ok?'✅':'❌'} {syncResult.msg}</div>}
           <Btn variant="success" onClick={syncSheets} disabled={syncing}>{syncing?<><Spinner size={13}/> Syncing…</>:'↑ Sync to Google Sheets'}</Btn>
         </Card>
+        {isMainAdmin&&<Card style={{padding:26,border:'1px solid rgba(124,58,237,0.25)'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:12}}>👥 Staff Accounts (Sub-Admins)</div>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:14,lineHeight:1.7}}>
+            4 staff login accounts are available. Set credentials via environment variables<br/>
+            <code style={{background:'rgba(255,255,255,0.05)',padding:'2px 8px',borderRadius:6,fontSize:12,color:'#bb86fc'}}>SUB_ADMIN_1=username:password</code> … <code style={{background:'rgba(255,255,255,0.05)',padding:'2px 8px',borderRadius:6,fontSize:12,color:'#bb86fc'}}>SUB_ADMIN_4</code>
+          </p>
+          <div style={{background:'rgba(255,255,255,0.03)',borderRadius:10,border:'1px solid #2a2347',padding:'12px 16px',fontSize:13,lineHeight:2}}>
+            <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'4px 16px'}}>
+              <span style={{color:'#6b6490'}}>Default logins:</span><span style={{color:'#f0eeff'}}>staff1 / staff1234 &nbsp;•&nbsp; staff2 / staff2234</span>
+              <span style={{color:'#6b6490'}}></span><span style={{color:'#f0eeff'}}>staff3 / staff3234 &nbsp;•&nbsp; staff4 / staff4234</span>
+              <span style={{color:'#6b6490'}}>Access:</span><span style={{color:'#22c55e'}}>Members, Attendance, Offers, Leads, Trainers, Store, Pricing, Exercises</span>
+              <span style={{color:'#6b6490'}}>Restricted:</span><span style={{color:'#ef4444'}}>Revenue, Expenses, Staff Salary (main admin only)</span>
+            </div>
+          </div>
+        </Card>}
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
-          <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>Logging out will end your admin session.</p>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>{isMainAdmin?'Logging out will end your admin session.':'You are logged in as a staff account. Logging out will end your session.'}</p>
+          {!isMainAdmin&&<p style={{fontSize:12,color:'#f59e0b',marginBottom:14,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px'}}>👤 Staff mode — Revenue, Expenses &amp; Staff Salary sections are restricted.</p>}
           <Btn variant="danger" onClick={onLogout}>🚪 Logout</Btn>
         </Card>
       </div>
@@ -1193,20 +1233,357 @@ function Settings({ apiFetch, onLogout }) {
   )
 }
 
-const NAV = [
-  {id:'dashboard',  icon:'⚡', label:'Dashboard'  },
-  {id:'members',    icon:'👥', label:'Members'    },
-  {id:'attendance', icon:'📅', label:'Attendance' },
-  {id:'offers',     icon:'🔥', label:'Offers'     },
-  {id:'leads',      icon:'📬', label:'Leads'      },
-  {id:'trainers',   icon:'🏋', label:'Trainers'  },
-  {id:'store',      icon:'🛒', label:'Store'      },
-  {id:'pricing',    icon:'💳', label:'Pricing'    },
-  {id:'exercises',  icon:'🏃', label:'Exercises'  },
-  {id:'settings',   icon:'⚙️',  label:'Settings'   },
+const NAV_ALL = [
+  {id:'dashboard',  icon:'⚡', label:'Dashboard',  adminOnly:false },
+  {id:'members',    icon:'👥', label:'Members',    adminOnly:false },
+  {id:'attendance', icon:'📅', label:'Attendance', adminOnly:false },
+  {id:'offers',     icon:'🔥', label:'Offers',     adminOnly:false },
+  {id:'leads',      icon:'📬', label:'Leads',      adminOnly:false },
+  {id:'trainers',   icon:'🏋', label:'Trainers',  adminOnly:false },
+  {id:'store',      icon:'🛒', label:'Store',      adminOnly:false },
+  {id:'pricing',    icon:'💳', label:'Pricing',    adminOnly:false },
+  {id:'exercises',  icon:'🏃', label:'Exercises',  adminOnly:false },
+  {id:'revenue',    icon:'📈', label:'Revenue',    adminOnly:true  },
+  {id:'expenses',   icon:'💸', label:'Expenses',   adminOnly:true  },
+  {id:'staffpay',   icon:'🧾', label:'Staff Salary',adminOnly:true },
+  {id:'settings',   icon:'⚙️',  label:'Settings',   adminOnly:false },
 ]
 
-function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose }) {
+
+/* ══════════════════════════════════════════════════════
+   EXPENSES SECTION — main admin only
+   ══════════════════════════════════════════════════════ */
+function Expenses({ apiFetch, toast }) {
+  const [expenses, setExpenses] = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [modal,    setModal]    = useState(null)
+  const [saving,   setSaving]   = useState(false)
+  const CATS = ['Rent','Equipment','Utilities','Salary','Maintenance','Marketing','Supplements','Other']
+  const blank = { title:'', amount:'', category:'General', date:new Date().toISOString().slice(0,10), note:'' }
+  const [form, setForm] = useState(blank)
+  const set = (k,v) => setForm(f=>({...f,[k]:v}))
+
+  const load = async () => {
+    setLoading(true)
+    try { setExpenses(await apiFetch('/api/admin/expenses')) } catch{}
+    setLoading(false)
+  }
+  useEffect(()=>{ load() },[])
+
+  const save = async () => {
+    if (!form.title || !form.amount) { toast('Title and amount required','err'); return }
+    setSaving(true)
+    try {
+      if (modal==='add') await apiFetch('/api/admin/expenses','POST',{...form, amount:parseFloat(form.amount)||0})
+      else await apiFetch(`/api/admin/expenses/${modal.id}`,'PUT',{...form, amount:parseFloat(form.amount)||0})
+      await load(); toast('Saved!','ok'); setModal(null)
+    } catch { toast('Save failed','err') }
+    setSaving(false)
+  }
+  const del = async id => {
+    if (!confirm('Delete this expense?')) return
+    try { await apiFetch(`/api/admin/expenses/${id}`,'DELETE'); await load(); toast('Deleted','ok') }
+    catch { toast('Failed','err') }
+  }
+
+  const total = expenses.reduce((s,e)=>s+(e.amount||0),0)
+  const bycat = {}
+  expenses.forEach(e=>{ bycat[e.category]=(bycat[e.category]||0)+(e.amount||0) })
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div>
+          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>EXPENSES</h2>
+          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Track all gym expenses and costs</p>
+        </div>
+        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Expense</Btn>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
+        <Card style={{padding:'18px 20px'}}>
+          <div style={{fontSize:22,marginBottom:6}}>💸</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#ef4444'}}>₹{total.toLocaleString('en-IN')}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Total Expenses</div>
+        </Card>
+        <Card style={{padding:'18px 20px'}}>
+          <div style={{fontSize:22,marginBottom:6}}>📋</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#f59e0b'}}>{expenses.length}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Total Entries</div>
+        </Card>
+        {Object.entries(bycat).slice(0,2).map(([cat,amt])=>(
+          <Card key={cat} style={{padding:'18px 20px'}}>
+            <div style={{fontSize:22,marginBottom:6}}>🏷️</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:'#7c3aed'}}>₹{amt.toLocaleString('en-IN')}</div>
+            <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>{cat}</div>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
+          <Table heads={['Date','Title','Category','Amount','Note','Actions']} empty={expenses.length===0?'No expenses recorded yet':''}>
+            {expenses.map(e=>(
+              <tr key={e.id} className="adm-row">
+                <Td style={{color:'#6b6490',fontSize:13,whiteSpace:'nowrap'}}>{e.date}</Td>
+                <Td style={{fontWeight:500}}>{e.title}</Td>
+                <Td><Badge label={e.category||'General'} color="accent"/></Td>
+                <Td style={{color:'#ef4444',fontWeight:700}}>₹{(e.amount||0).toLocaleString('en-IN')}</Td>
+                <Td style={{color:'#6b6490',fontSize:12,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.note||'—'}</Td>
+                <Td><div style={{display:'flex',gap:6}}>
+                  <Btn size="sm" variant="ghost" onClick={()=>{setForm({...e,amount:String(e.amount||0)});setModal(e)}}>Edit</Btn>
+                  <Btn size="sm" variant="danger" onClick={()=>del(e.id)}>Del</Btn>
+                </div></Td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </Card>
+
+      {modal&&(
+        <Modal title={modal==='add'?'Add Expense':'Edit Expense'} onClose={()=>setModal(null)}>
+          <FR label="Title *"><input style={inp} value={form.title||''} onChange={e=>set('title',e.target.value)} placeholder="e.g. Monthly Rent" autoFocus/></FR>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <FR label="Amount (₹) *"><input style={inp} type="number" value={form.amount||''} onChange={e=>set('amount',e.target.value)} placeholder="0"/></FR>
+            <FR label="Date *"><input style={inp} type="date" value={form.date||''} onChange={e=>set('date',e.target.value)}/></FR>
+          </div>
+          <FR label="Category">
+            <select style={inp} value={form.category||'General'} onChange={e=>set('category',e.target.value)}>
+              {CATS.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </FR>
+          <FR label="Note (optional)"><input style={inp} value={form.note||''} onChange={e=>set('note',e.target.value)} placeholder="Any additional details…"/></FR>
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Expense'}</Btn>
+            <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════
+   STAFF SALARY SECTION — main admin only
+   ══════════════════════════════════════════════════════ */
+function StaffSalary({ apiFetch, toast }) {
+  const [staff,   setStaff]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal,   setModal]   = useState(null)
+  const [saving,  setSaving]  = useState(false)
+  const blank = { name:'', role:'', phone:'', email:'', salary:'', joinDate:new Date().toISOString().slice(0,10), endDate:'', status:'Active', note:'' }
+  const [form, setForm] = useState(blank)
+  const set = (k,v) => setForm(f=>({...f,[k]:v}))
+
+  const load = async () => {
+    setLoading(true)
+    try { setStaff(await apiFetch('/api/admin/staff')) } catch{}
+    setLoading(false)
+  }
+  useEffect(()=>{ load() },[])
+
+  const save = async () => {
+    if (!form.name || !form.role) { toast('Name and role required','err'); return }
+    setSaving(true)
+    try {
+      if (modal==='add') await apiFetch('/api/admin/staff','POST',{...form, salary:parseFloat(form.salary)||0})
+      else await apiFetch(`/api/admin/staff/${modal.id}`,'PUT',{...form, salary:parseFloat(form.salary)||0})
+      await load(); toast('Staff saved!','ok'); setModal(null)
+    } catch { toast('Save failed','err') }
+    setSaving(false)
+  }
+  const del = async id => {
+    if (!confirm('Remove this staff member?')) return
+    try { await apiFetch(`/api/admin/staff/${id}`,'DELETE'); await load(); toast('Deleted','ok') }
+    catch { toast('Failed','err') }
+  }
+
+  const active    = staff.filter(s=>s.status==='Active')
+  const totalSal  = active.reduce((s,st)=>s+(st.salary||0),0)
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div>
+          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>STAFF & SALARY</h2>
+          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Staff records, salaries, join & end dates</p>
+        </div>
+        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Staff</Btn>
+      </div>
+
+      {/* Summary */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
+        <Card style={{padding:'18px 20px'}}>
+          <div style={{fontSize:22,marginBottom:6}}>👨‍💼</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#7c3aed'}}>{active.length}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Active Staff</div>
+        </Card>
+        <Card style={{padding:'18px 20px'}}>
+          <div style={{fontSize:22,marginBottom:6}}>🧾</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#f59e0b'}}>₹{totalSal.toLocaleString('en-IN')}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Monthly Salary Total</div>
+        </Card>
+        <Card style={{padding:'18px 20px'}}>
+          <div style={{fontSize:22,marginBottom:6}}>📋</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#22c55e'}}>{staff.length}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Total Staff Records</div>
+        </Card>
+      </div>
+
+      {/* Desktop table */}
+      <Card className="adm-table-desktop">
+        {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
+          <Table heads={['Name','Role','Phone','Salary/Month','Join Date','End Date','Status','Actions']} empty={staff.length===0?'No staff records yet':''}>
+            {staff.map(s=>(
+              <tr key={s.id} className="adm-row">
+                <Td>
+                  <div style={{fontWeight:600,fontSize:14}}>{s.name}</div>
+                  {s.email&&<div style={{fontSize:11,color:'#6b6490'}}>{s.email}</div>}
+                </Td>
+                <Td style={{fontSize:13,color:'#7c3aed',fontWeight:500}}>{s.role}</Td>
+                <Td style={{fontSize:13,color:'#6b6490'}}>{s.phone||'—'}</Td>
+                <Td style={{color:'#22c55e',fontWeight:700}}>₹{(s.salary||0).toLocaleString('en-IN')}</Td>
+                <Td style={{fontSize:13,color:'#6b6490',whiteSpace:'nowrap'}}>{s.joinDate||'—'}</Td>
+                <Td style={{fontSize:13,color:s.endDate?'#ef4444':'#6b6490',whiteSpace:'nowrap'}}>{s.endDate||'—'}</Td>
+                <Td><Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/></Td>
+                <Td><div style={{display:'flex',gap:6}}>
+                  <Btn size="sm" variant="ghost" onClick={()=>{setForm({...s,salary:String(s.salary||0)});setModal(s)}}>Edit</Btn>
+                  <Btn size="sm" variant="danger" onClick={()=>del(s.id)}>Del</Btn>
+                </div></Td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </Card>
+
+      {/* Mobile cards */}
+      <div className="member-card">
+        {staff.length===0 ? <p style={{textAlign:'center',color:'#6b6490',padding:40}}>No staff records yet</p>
+          : staff.map(s=>(
+          <Card key={s.id} style={{marginBottom:12,padding:18}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,gap:8}}>
+              <div>
+                <p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{s.name}</p>
+                <p style={{fontSize:13,color:'#7c3aed',fontWeight:500}}>{s.role}</p>
+              </div>
+              <Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
+              <div><span style={{color:'#6b6490'}}>Salary: </span><span style={{color:'#22c55e',fontWeight:600}}>₹{(s.salary||0).toLocaleString('en-IN')}/mo</span></div>
+              <div><span style={{color:'#6b6490'}}>Phone: </span><span>{s.phone||'—'}</span></div>
+              <div><span style={{color:'#6b6490'}}>Joined: </span><span>{s.joinDate||'—'}</span></div>
+              <div><span style={{color:'#6b6490'}}>End: </span><span style={{color:s.endDate?'#ef4444':'#6b6490'}}>{s.endDate||'—'}</span></div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <Btn size="sm" variant="ghost" onClick={()=>{setForm({...s,salary:String(s.salary||0)});setModal(s)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+              <Btn size="sm" variant="danger" onClick={()=>del(s.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {modal&&(
+        <Modal title={modal==='add'?'Add Staff Member':'Edit Staff Member'} onClose={()=>setModal(null)} wide>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            <FR label="Full Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)} placeholder="e.g. Rahul Sharma" autoFocus/></FR>
+            <FR label="Role / Designation *"><input style={inp} value={form.role||''} onChange={e=>set('role',e.target.value)} placeholder="e.g. Trainer, Receptionist"/></FR>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            <FR label="Phone"><input style={inp} value={form.phone||''} onChange={e=>set('phone',e.target.value)} type="tel" placeholder="10-digit number"/></FR>
+            <FR label="Email"><input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} type="email" placeholder="staff@example.com"/></FR>
+          </div>
+          <FR label="Monthly Salary (₹)"><input style={inp} type="number" value={form.salary||''} onChange={e=>set('salary',e.target.value)} placeholder="e.g. 15000"/></FR>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            <FR label="Join Date *"><input style={inp} type="date" value={form.joinDate||''} onChange={e=>set('joinDate',e.target.value)}/></FR>
+            <FR label="End Date (leave blank if current)"><input style={{...inp,color:form.endDate?'#ef4444':inp.color}} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/></FR>
+          </div>
+          <FR label="Status">
+            <select style={inp} value={form.status||'Active'} onChange={e=>set('status',e.target.value)}>
+              <option>Active</option><option>Inactive</option><option>Resigned</option><option>Terminated</option>
+            </select>
+          </FR>
+          <FR label="Note (optional)"><input style={inp} value={form.note||''} onChange={e=>set('note',e.target.value)} placeholder="Any additional notes…"/></FR>
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Staff'}</Btn>
+            <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════
+   REVENUE SECTION — main admin only
+   ══════════════════════════════════════════════════════ */
+function Revenue({ apiFetch, members, toast }) {
+  const [summary, setSummary] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(()=>{
+    apiFetch('/api/admin/revenue')
+      .then(d=>setSummary(d))
+      .catch(()=>{})
+      .finally(()=>setLoading(false))
+  },[])
+
+  const paidMembers  = members.filter(m=>m.fee==='Paid')
+  const unpaidMembers= members.filter(m=>m.fee==='Unpaid')
+  const totalRevenue = paidMembers.reduce((s,m)=>{ const n=parseInt((m.plan||'').replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
+  const totalExp     = summary ? Object.values(summary.expByMonth||{}).reduce((s,v)=>s+v,0) : 0
+  const netProfit    = totalRevenue - totalExp
+
+  const months = summary ? [...new Set([...Object.keys(summary.monthly||{}), ...Object.keys(summary.expByMonth||{})])].sort().reverse().slice(0,12) : []
+
+  return (
+    <div>
+      <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:6}}>REVENUE & FINANCE</h2>
+      <p style={{color:'#6b6490',fontSize:13,marginBottom:24}}>Financial overview — visible to main admin only 🔐</p>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:28}}>
+        {[
+          {icon:'💰',label:'Total Revenue',value:`₹${(totalRevenue/1000).toFixed(1)}k`,color:'#22c55e'},
+          {icon:'💸',label:'Total Expenses',value:`₹${(totalExp/1000).toFixed(1)}k`,color:'#ef4444'},
+          {icon:'📈',label:'Net Profit',value:`₹${(netProfit/1000).toFixed(1)}k`,color:netProfit>=0?'#22c55e':'#ef4444'},
+          {icon:'✅',label:'Paid Members',value:paidMembers.length,color:'#7c3aed'},
+          {icon:'⚠️',label:'Unpaid Fees',value:unpaidMembers.length,color:'#f59e0b'},
+          {icon:'🧾',label:'Monthly Salary',value:summary?`₹${(summary.totalMonthlySalary/1000).toFixed(1)}k`:'…',color:'#f59e0b'},
+        ].map(({icon,label,value,color})=>(
+          <Card key={label} style={{padding:'18px 20px'}}>
+            <div style={{fontSize:22,marginBottom:6}}>{icon}</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color}}>{value}</div>
+            <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase',marginTop:2}}>{label}</div>
+          </Card>
+        ))}
+      </div>
+
+      {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
+        <Card>
+          <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:'1px solid #2a2347'}}>Monthly Breakdown</div>
+          <Table heads={['Month','Revenue','Expenses','Net']}>
+            {months.map(m=>{
+              const rev = summary.monthly?.[m]||0
+              const exp = summary.expByMonth?.[m]||0
+              const net = rev - exp
+              return (
+                <tr key={m} className="adm-row">
+                  <Td style={{fontWeight:500}}>{m}</Td>
+                  <Td style={{color:'#22c55e',fontWeight:600}}>₹{rev.toLocaleString('en-IN')}</Td>
+                  <Td style={{color:'#ef4444',fontWeight:600}}>₹{exp.toLocaleString('en-IN')}</Td>
+                  <Td style={{color:net>=0?'#22c55e':'#ef4444',fontWeight:700}}>₹{net.toLocaleString('en-IN')}</Td>
+                </tr>
+              )
+            })}
+            {months.length===0&&<tr><td colSpan={4} style={{textAlign:'center',color:'#6b6490',padding:40}}>No data yet</td></tr>}
+          </Table>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose, isMainAdmin }) {
   const W = collapsed ? 64 : 220
   return (
     <>
@@ -1220,12 +1597,17 @@ function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose })
           {mobileOpen&&<button className="adm-overlay-bg" onClick={onClose} style={{background:'none',border:'none',color:'#6b6490',fontSize:20,cursor:'pointer',padding:'4px 8px',minWidth:40,minHeight:40,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
         </div>
         <nav style={{flex:1,padding:'10px 0',overflowY:'auto'}}>
-          {NAV.map(n=>(
+          {NAV_ALL.filter(n=>!n.adminOnly||isMainAdmin).map(n=>(
             <div key={n.id} className="adm-nav" onClick={()=>{onChange(n.id);onClose?.()}} style={{justifyContent:collapsed?'center':'flex-start',color:active===n.id?'#7c3aed':'#6b6490',background:active===n.id?'rgba(124,58,237,0.12)':'transparent',borderLeft:active===n.id?'3px solid #7c3aed':'3px solid transparent'}}>
               <span style={{fontSize:17}}>{n.icon}</span>
               {!collapsed&&<span>{n.label}</span>}
             </div>
           ))}
+          {!collapsed&&!isMainAdmin&&(
+            <div style={{margin:'12px 16px 0',padding:'10px 12px',borderRadius:10,background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.2)',fontSize:11,color:'#6b6490',lineHeight:1.6}}>
+              👤 Staff mode — Revenue & Finance sections restricted
+            </div>
+          )}
         </nav>
         <div style={{padding:collapsed?'14px 0':'14px 20px',borderTop:'1px solid #2a2347'}}>
           <div onClick={onLogout} style={{cursor:'pointer',color:'#ef4444',display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:600,justifyContent:collapsed?'center':'flex-start',padding:'8px 0',minHeight:44}}>
@@ -1243,8 +1625,24 @@ function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose })
    - apiFetch is rebuilt any time the token changes
    - 401 from any API call forces logout automatically
    ══════════════════════════════════════════════════════════════ */
+
+function AccessDenied() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',gap:16}}>
+      <div style={{fontSize:60}}>🔒</div>
+      <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,letterSpacing:2,color:'#ef4444'}}>ACCESS RESTRICTED</h2>
+      <p style={{color:'#6b6490',fontSize:14,textAlign:'center',maxWidth:320,lineHeight:1.7}}>
+        This section is only accessible to the <strong style={{color:'#f0eeff'}}>Main Admin</strong> account.<br/>
+        Revenue, Expenses, and Staff Salary data is restricted to the owner.
+      </p>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const [token,setToken]           = useState(null)   // JWT in memory only
+  const [adminRole,setAdminRole]   = useState('admin') // 'admin' | 'staff'
+  const [adminUser,setAdminUser]   = useState('admin')
   const [page,setPage]             = useState('dashboard')
   const [collapsed,setCollapsed]   = useState(false)
   const [mobileOpen,setMobileOpen] = useState(false)
@@ -1255,6 +1653,8 @@ export default function AdminPage() {
   const [products,setProducts]     = useState([])
   const [loading,setLoading]       = useState(true)
   const [toastData,setToastData]   = useState(null)
+
+  const isMainAdmin = adminRole === 'admin'
 
   const showToast = (msg, type='ok') => { setToastData({msg,type}); setTimeout(()=>setToastData(null),3200) }
 
@@ -1285,12 +1685,16 @@ export default function AdminPage() {
 
   useEffect(()=>{ loadAll() }, [loadAll])
 
-  const handleLogout = () => { setToken(null); setPage('dashboard') }
+  const handleLogout = () => { setToken(null); setAdminRole('admin'); setAdminUser('admin'); setPage('dashboard') }
 
   if (!token) return (
     <>
       <style>{CSS}</style>
-      <LoginPage onLogin={(tok) => setToken(tok)}/>
+      <LoginPage onLogin={(tok, role='admin', username='admin') => {
+        setToken(tok)
+        setAdminRole(role)
+        setAdminUser(username)
+      }}/>
     </>
   )
 
@@ -1306,7 +1710,7 @@ export default function AdminPage() {
   }
 
   const PAGES = {
-    dashboard:  <Dashboard  {...{apiFetch,members,products,leads,offers}} onNavigate={setPage}/>,
+    dashboard:  <Dashboard  {...{apiFetch,members,products,leads,offers,isMainAdmin,adminUser}} onNavigate={setPage}/>,
     members:    <Members    {...{apiFetch,token,members}} reload={loadAll} toast={showToast}/>,
     attendance: <Attendance {...{apiFetch}} reload={loadAll} toast={showToast}/>,
     offers:     <Offers     {...{apiFetch,token,offers}} reload={loadAll} toast={showToast}/>,
@@ -1315,14 +1719,18 @@ export default function AdminPage() {
     store:      <AdminStore     {...shared}/>,
     pricing:    <AdminPricing   {...shared}/>,
     exercises:  <AdminExercises {...shared}/>,
-    settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout}/>,
+    // Main-admin-only pages
+    revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members}} toast={showToast}/> : <AccessDenied/>,
+    expenses:   isMainAdmin ? <Expenses  apiFetch={apiFetch} toast={showToast}/>    : <AccessDenied/>,
+    staffpay:   isMainAdmin ? <StaffSalary apiFetch={apiFetch} toast={showToast}/>  : <AccessDenied/>,
+    settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout} isMainAdmin={isMainAdmin} adminUser={adminUser}/>,
   }
 
   return (
     <>
       <style>{CSS}</style>
       <div style={{display:'flex',minHeight:'100vh',background:'#06050f',color:'#f0eeff',fontFamily:"'Poppins',sans-serif"}}>
-        <Sidebar active={page} onChange={setPage} onLogout={handleLogout} collapsed={collapsed} mobileOpen={mobileOpen} onClose={()=>setMobileOpen(false)}/>
+        <Sidebar active={page} onChange={setPage} onLogout={handleLogout} collapsed={collapsed} mobileOpen={mobileOpen} onClose={()=>setMobileOpen(false)} isMainAdmin={isMainAdmin}/>
         <div className="adm-main" style={{marginLeft:SL,flex:1,display:'flex',flexDirection:'column',transition:'margin-left .3s',minWidth:0}}>
           <div style={{position:'sticky',top:0,zIndex:50,background:'#06050f',borderBottom:'1px solid #2a2347',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px clamp(12px,3vw,26px)',gap:8}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -1335,7 +1743,11 @@ export default function AdminPage() {
                 {loading?<Spinner size={12}/>:'↻'}<span className="hide-mobile">{loading?'':'Refresh'}</span>
               </button>
               <span className="hide-mobile" style={{fontSize:12,color:'#6b6490'}}>{new Date().toDateString()}</span>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'2px solid #7c3aed',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>👤</div>
+              <div style={{display:'flex',alignItems:'center',gap:7,flexShrink:0}}>
+                {!isMainAdmin&&<span className="hide-mobile" style={{fontSize:11,background:'rgba(245,158,11,0.15)',color:'#f59e0b',border:'1px solid rgba(245,158,11,0.3)',borderRadius:20,padding:'2px 10px',fontWeight:600}}>Staff</span>}
+                {isMainAdmin&&<span className="hide-mobile" style={{fontSize:11,background:'rgba(124,58,237,0.15)',color:'#bb86fc',border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'2px 10px',fontWeight:600}}>Admin</span>}
+                <div title={adminUser} style={{width:32,height:32,borderRadius:'50%',background:isMainAdmin?'rgba(124,58,237,0.12)':'rgba(245,158,11,0.12)',border:`2px solid ${isMainAdmin?'#7c3aed':'#f59e0b'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>{isMainAdmin?'👑':'👤'}</div>
+              </div>
             </div>
           </div>
           <main key={page} className="adm-fade" style={{padding:'clamp(16px,3vw,30px) clamp(12px,3vw,26px)',flex:1,minWidth:0,overflowX:'hidden'}}>
