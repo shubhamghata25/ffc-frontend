@@ -113,6 +113,11 @@ const CSS = `
     .adm-overlay-bg { display:none !important; }
     .adm-hamburger { display:none !important; }
   }
+  /* Sidebar scrollbar styling */
+  .adm-sidebar-fixed nav::-webkit-scrollbar { width:3px }
+  .adm-sidebar-fixed nav::-webkit-scrollbar-track { background:transparent }
+  .adm-sidebar-fixed nav::-webkit-scrollbar-thumb { background:#2a2347; border-radius:3px }
+  .adm-sidebar-fixed nav::-webkit-scrollbar-thumb:hover { background:#7c3aed }
 `
 
 const Btn = ({ children, onClick, variant='primary', size='md', disabled=false, style:s={} }) => {
@@ -507,7 +512,7 @@ function Dashboard({ apiFetch, members, products, leads, offers, onNavigate, isM
         <Stat icon="👥" label="Total Members" value={members.length}/>
         <Stat icon="✅" label="Active"         value={active}  color="#22c55e"/>
         <Stat icon="⚠️" label="Unpaid Fees"   value={unpaid}  color="#f59e0b"/>
-        <Stat icon="💰" label="Est. Revenue"  value={`₹${(revenue/1000).toFixed(1)}k`}/>
+        {isMainAdmin&&<Stat icon="💰" label="Est. Revenue"  value={`₹${(revenue/1000).toFixed(1)}k`}/>}
         <Stat icon="📬" label="Leads"         value={leads.length}/>
         <Stat icon="🛒" label="Products"      value={products.length} color="#6b6490"/>
       </div>
@@ -1588,7 +1593,7 @@ function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose, i
   return (
     <>
       {mobileOpen&&<div className="adm-overlay-bg" onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:198,backdropFilter:'blur(2px)'}}/>}
-      <aside className={`adm-sidebar-fixed${mobileOpen?' open':''}`} style={{width:W,minHeight:'100vh',background:'#0d0b1a',borderRight:'1px solid #2a2347',position:'fixed',top:0,left:0,zIndex:199,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <aside className={`adm-sidebar-fixed${mobileOpen?' open':''}`} style={{width:W,height:'100vh',background:'#0d0b1a',borderRight:'1px solid #2a2347',position:'fixed',top:0,left:0,zIndex:199,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{padding:collapsed?'22px 0':'24px 20px',borderBottom:'1px solid #2a2347',display:'flex',alignItems:'center',justifyContent:'space-between',whiteSpace:'nowrap'}}>
           <div style={{textAlign:collapsed?'center':'left'}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:3,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>{collapsed?'F':'FFC'}</div>
@@ -1596,7 +1601,7 @@ function Sidebar({ active, onChange, onLogout, collapsed, mobileOpen, onClose, i
           </div>
           {mobileOpen&&<button className="adm-overlay-bg" onClick={onClose} style={{background:'none',border:'none',color:'#6b6490',fontSize:20,cursor:'pointer',padding:'4px 8px',minWidth:40,minHeight:40,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
         </div>
-        <nav style={{flex:1,padding:'10px 0',overflowY:'auto'}}>
+        <nav style={{flex:1,padding:'10px 0',overflowY:'auto',overflowX:'hidden',minHeight:0}}>
           {NAV_ALL.filter(n=>!n.adminOnly||isMainAdmin).map(n=>(
             <div key={n.id} className="adm-nav" onClick={()=>{onChange(n.id);onClose?.()}} style={{justifyContent:collapsed?'center':'flex-start',color:active===n.id?'#7c3aed':'#6b6490',background:active===n.id?'rgba(124,58,237,0.12)':'transparent',borderLeft:active===n.id?'3px solid #7c3aed':'3px solid transparent'}}>
               <span style={{fontSize:17}}>{n.icon}</span>
