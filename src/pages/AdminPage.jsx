@@ -17,6 +17,20 @@ const API   = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const PLANS = ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999']
 const uid   = () => Math.random().toString(36).slice(2,9)
 
+// Map plan period string → number of days
+const periodToDays = (period='') => {
+  const p = period.toLowerCase()
+  if (p.includes('year'))    return 365
+  if (p.includes('half') || p==='6month' || p==='6months') return 182
+  if (p.includes('quarter') || p==='3month') return 91
+  if (p==='month' || p==='monthly') return 30
+  if (p==='week')  return 7
+  if (p==='day')   return 1
+  // fallback: try parsing a number from string
+  const n = parseInt(p)
+  return isNaN(n) ? 30 : n
+}
+
 // apiFetch is built at runtime with the current JWT from state (passed as prop)
 function makeApiFetch(token) {
   return async function apiFetch(path, method='GET', body=null) {
@@ -714,7 +728,7 @@ function QRPrintCard({ member, onClose, onNewMember }) {
   )
 }
 
-function Members({ apiFetch, token, members, reload, toast }) {
+function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmin=true }) {
   const [modal,    setModal]    = useState(null)
   const [search,   setSearch]   = useState('')
   const [saving,   setSaving]   = useState(false)
@@ -724,7 +738,7 @@ function Members({ apiFetch, token, members, reload, toast }) {
   // Plan period → days map for auto end-date calculation
   const PERIOD_DAYS = { 'Monthly':30, 'Quarterly':91, 'Half Yearly':182, 'Yearly':365 }
 
-  const blank = { name:'', phone:'', email:'', plan:PLANS[0], joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid' }
+  const blank = { name:'', phone:'', email:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'' }
   const [form, setForm] = useState(blank)
   const set = (k, v) => {
     setForm(f => {
@@ -798,13 +812,17 @@ function Members({ apiFetch, token, members, reload, toast }) {
               <Td style={{color:'#6b6490',fontSize:13}}>{m.phone}</Td>
               <Td style={{fontSize:13}}>{m.plan.split('–')[0].trim()}</Td>
               <Td style={{color:'#6b6490',fontSize:13}}>{m.joined}</Td>
-              <Td style={{color: m.endDate && m.endDate < new Date().toISOString().slice(0,10) ? '#ef4444' : '#f59e0b', fontSize:13}}>{m.endDate || '—'}</Td>
+              <Td style={{fontSize:13}}>
+                <div style={{color: m.endDate && m.endDate < new Date().toISOString().slice(0,10) ? '#ef4444' : '#f59e0b'}}>{m.endDate || '—'}</div>
+                {m.ptPlan && <div style={{fontSize:11,color:'#7c3aed',marginTop:2}}>🏋 PT · {m.scanDays||0} scan days</div>}
+                {m.ptPlan && m.accessEndDate && <div style={{fontSize:11,color:'#22c55e'}}>Access: {m.accessEndDate}</div>}
+              </Td>
               <Td><Badge label={m.status} color={m.status==='Active'?'green':'red'}/></Td>
               <Td><Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/></Td>
               <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}}>Edit</Btn>
+                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>🪪 Card</Btn>
-                <Btn size="sm" variant="danger" onClick={()=>del(m.id)}>Del</Btn>
+                {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(m.id)}>Del</Btn>}
               </div></Td>
             </tr>
           ))}
@@ -830,12 +848,12 @@ function Members({ apiFetch, token, members, reload, toast }) {
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
                 <div><span style={{color:'#6b6490'}}>Plan: </span><span>{m.plan.split('–')[0].trim()}</span></div>
                 <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
-                <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>
+                <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>{m.ptPlan&&<div style={{fontSize:11,color:'#7c3aed',marginTop:2}}>🏋 PT · {m.scanDays||0} scan days · Access: {m.accessEndDate||'—'}</div>}
               </div>
               <div style={{display:'flex',gap:8}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>🪪 Card</Btn>
-                <Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
+                {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>}
               </div>
             </Card>
           ))
@@ -859,18 +877,90 @@ function Members({ apiFetch, token, members, reload, toast }) {
           </FR>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
             <FR label="Plan">
-              <select style={inp} value={form.plan} onChange={e=>set('plan',e.target.value)}>
-                {PLANS.map(p=><option key={p}>{p}</option>)}
+              <select style={inp} value={form.plan} onChange={e=>{
+                const val = e.target.value
+                const sel = plans.find(p=>p.label===val || p.id===val)
+                set('plan', val)
+                if (sel && form.joined) {
+                  const days = periodToDays(sel.period)
+                  const end = new Date(form.joined)
+                  end.setDate(end.getDate() + days)
+                  set('endDate', end.toISOString().slice(0,10))
+                  // If PT plan is checked, also update accessEndDate
+                  if (form.ptPlan) {
+                    const access = new Date(form.joined)
+                    access.setDate(access.getDate() + days * 3)
+                    set('accessEndDate', access.toISOString().slice(0,10))
+                    set('scanDays', days)
+                  }
+                }
+              }}>
+                <option value="">— Select Plan —</option>
+                {plans.length > 0
+                  ? plans.filter(p=>p.active!==false).map(p=>(
+                      <option key={p.id} value={p.label}>{p.label} – ₹{p.effectivePrice||p.price}</option>
+                    ))
+                  : ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999'].map(p=><option key={p}>{p}</option>)
+                }
               </select>
             </FR>
-            <FR label="Join Date">
-              <input style={inp} type="date" value={form.joined} onChange={e=>set('joined',e.target.value)}/>
+            <FR label="Join / Start Date">
+              <input style={inp} type="date" value={form.joined} onChange={e=>{
+                const newDate = e.target.value
+                set('joined', newDate)
+                const sel = plans.find(p=>p.label===form.plan)
+                if (sel && newDate) {
+                  const days = periodToDays(sel.period)
+                  const end = new Date(newDate)
+                  end.setDate(end.getDate() + days)
+                  set('endDate', end.toISOString().slice(0,10))
+                  if (form.ptPlan) {
+                    const access = new Date(newDate)
+                    access.setDate(access.getDate() + days * 3)
+                    set('accessEndDate', access.toISOString().slice(0,10))
+                    set('scanDays', days)
+                  }
+                }
+              }}/>
             </FR>
           </div>
-          <FR label="Membership End Date">
+          <FR label="Membership End Date (Scan Deadline)">
             <input style={{...inp, color:'#f59e0b'}} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/>
-            <div style={{fontSize:11,color:'#6b6490',marginTop:4}}>✨ Auto-calculated from plan. You can override it.</div>
+            <div style={{fontSize:11,color:'#6b6490',marginTop:4}}>✨ Auto-calculated from plan + start date. You can override.</div>
           </FR>
+          {/* PT Plan Section */}
+          <div style={{padding:'14px 16px',background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.25)',borderRadius:10,marginBottom:4}}>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom: form.ptPlan ? 14 : 0}}>
+              <input type="checkbox" checked={!!form.ptPlan} onChange={e=>{
+                set('ptPlan', e.target.checked)
+                if (e.target.checked && form.joined) {
+                  const sel = plans.find(p=>p.label===form.plan)
+                  const days = sel ? periodToDays(sel.period) : (form.endDate ? Math.round((new Date(form.endDate)-new Date(form.joined))/86400000) : 30)
+                  const access = new Date(form.joined)
+                  access.setDate(access.getDate() + days * 3)
+                  set('accessEndDate', access.toISOString().slice(0,10))
+                  set('scanDays', days)
+                } else {
+                  set('accessEndDate', '')
+                  set('scanDays', 0)
+                }
+              }} style={{width:16,height:16,accentColor:'#7c3aed'}}/>
+              <span style={{fontWeight:600,fontSize:13,color:'#bb86fc'}}>🏋 Personal Trainer (PT) Plan</span>
+              <span style={{fontSize:11,color:'#6b6490'}}>QR scan days limited + 2× access window</span>
+            </label>
+            {form.ptPlan && (
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <FR label="Total QR Scan Days">
+                  <input style={inp} type="number" value={form.scanDays||''} onChange={e=>set('scanDays',parseInt(e.target.value)||0)} placeholder="e.g. 30"/>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Actual paid gym days</div>
+                </FR>
+                <FR label="Physical Access Window End">
+                  <input style={{...inp,color:'#22c55e'}} type="date" value={form.accessEndDate||''} onChange={e=>set('accessEndDate',e.target.value)}/>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Last day member can enter gym</div>
+                </FR>
+              </div>
+            )}
+          </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <FR label="Status">
               <select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}>
@@ -1656,6 +1746,7 @@ export default function AdminPage() {
   const [offers,setOffers]         = useState([])
   const [trainers,setTrainers]     = useState([])
   const [products,setProducts]     = useState([])
+  const [plans,setPlans]           = useState([])
   const [loading,setLoading]       = useState(true)
   const [toastData,setToastData]   = useState(null)
 
@@ -1676,14 +1767,15 @@ export default function AdminPage() {
     if (!token) return
     setLoading(true)
     try {
-      const [m,l,o,t,p] = await Promise.all([
+      const [m,l,o,t,p,pl] = await Promise.all([
         apiFetch('/api/admin/members'),
         apiFetch('/api/admin/leads'),
         apiFetch('/api/admin/offers'),
         apiFetch('/api/admin/trainers'),
         fetch(`${API}/api/products`).then(r=>r.json()).catch(()=>[]),
+        apiFetch('/api/admin/plans').catch(()=>[]),
       ])
-      setMembers(m); setLeads(l); setOffers(o); setTrainers(t); setProducts(p)
+      setMembers(m); setLeads(l); setOffers(o); setTrainers(t); setProducts(p); setPlans(pl)
     } catch(e) { console.error('loadAll',e) }
     setLoading(false)
   }, [token])
@@ -1716,7 +1808,7 @@ export default function AdminPage() {
 
   const PAGES = {
     dashboard:  <Dashboard  {...{apiFetch,members,products,leads,offers,isMainAdmin,adminUser}} onNavigate={setPage}/>,
-    members:    <Members    {...{apiFetch,token,members}} reload={loadAll} toast={showToast}/>,
+    members:    <Members    {...{apiFetch,token,members,plans,isMainAdmin}} reload={loadAll} toast={showToast}/>,
     attendance: <Attendance {...{apiFetch}} reload={loadAll} toast={showToast}/>,
     offers:     <Offers     {...{apiFetch,token,offers}} reload={loadAll} toast={showToast}/>,
     leads:      <Leads      {...{apiFetch,leads}} reload={loadAll} toast={showToast}/>,
