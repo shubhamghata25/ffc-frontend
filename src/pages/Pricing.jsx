@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { openRazorpay, openPhonePeUPI } from '../hooks/usePayment.jsx'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
@@ -229,13 +229,28 @@ function PlanCard({ plan, onSelect }) {
 /* ─── Main Pricing Page ─── */
 export default function Pricing() {
   const [plans,   setPlans]   = useState([])
+  const [offer,   setOffer]   = useState(null)
   const [loading, setLoading] = useState(true)
-  const [selected,setSelected]= useState(null)   // plan to pay for
+  const [selected,setSelected]= useState(null)
+  const ptRef = useRef(null)
 
   const loadPlans = () => {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
   }
   useEffect(loadPlans,[])
+  useEffect(()=>{
+    fetch(`${API}/api/offer`).then(r=>r.json()).then(d=>{ if(d&&d.status==='ON') setOffer(d) }).catch(()=>{})
+  },[])
+
+  // Scroll to PT section if hash present
+  useEffect(()=>{
+    if(!loading && window.location.hash==='#personal-trainers' && ptRef.current){
+      setTimeout(()=>ptRef.current.scrollIntoView({behavior:'smooth',block:'start'}),200)
+    }
+  },[loading])
+
+  const membershipPlans = plans.filter(p => !p.ptPlan)
+  const ptPlans         = plans.filter(p => p.ptPlan)
 
   return (
     <div className="page-wrapper">
@@ -246,52 +261,104 @@ export default function Pricing() {
         }
       `}</style>
 
-      <section className="section" style={{ textAlign:'center' }}>
-        <div className="accent-line" style={{ margin:'0 auto 14px' }}/>
+      {/* ─── OFFER BANNER ─── */}
+      {offer && (
+        <section style={{borderBottom:'1px solid rgba(124,58,237,0.2)',position:'relative',overflow:'hidden'}}>
+          {offer.poster
+            ? <div style={{position:'relative'}}>
+                <img src={offer.poster} alt={offer.title} style={{width:'100%',height:'clamp(180px,40vw,380px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
+                <div style={{position:'absolute',inset:0,background:'rgba(6,5,15,0.62)'}}/>
+                <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px 6%',textAlign:'center'}}>
+                  <div className="badge-purple" style={{marginBottom:10,fontSize:11,letterSpacing:2}}>🔥 LIMITED TIME OFFER</div>
+                  <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(22px,5vw,52px)',letterSpacing:2,marginBottom:8}}>{offer.title}</h2>
+                  <p style={{color:'rgba(240,238,255,0.82)',marginBottom:18,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,maxWidth:480}}>{offer.description}</p>
+                </div>
+              </div>
+            : <div style={{background:'linear-gradient(135deg,#1a0a3e,#0d0b1a)',padding:'clamp(24px,4vw,40px) 8%',textAlign:'center',position:'relative',overflow:'hidden'}}>
+                <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 50%,rgba(124,58,237,0.18) 0%,transparent 65%)',pointerEvents:'none'}}/>
+                <div className="badge-purple" style={{marginBottom:10,position:'relative'}}>🔥 LIMITED TIME OFFER</div>
+                <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,5vw,52px)',letterSpacing:2,marginBottom:8,position:'relative'}}>{offer.title}</h2>
+                <p style={{color:'rgba(240,238,255,0.8)',marginBottom:0,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,position:'relative'}}>{offer.description}</p>
+              </div>
+          }
+        </section>
+      )}
+
+      {/* ─── SECTION 1: MEMBERSHIP PLANS ─── */}
+      <section className="section" style={{textAlign:'center'}}>
+        <div className="accent-line" style={{margin:'0 auto 14px'}}/>
         <h1 className="section-title">
-          Membership <span style={{ background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>Plans</span>
+          Membership <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Plans</span>
         </h1>
-        <p className="section-sub" style={{ margin:'0 auto clamp(32px,5vw,56px)' }}>
+        <p className="section-sub" style={{margin:'0 auto clamp(32px,5vw,48px)'}}>
           No hidden fees. Cancel anytime. Pick the plan that fits your journey.
         </p>
 
         {loading && (
-          <div style={{ padding:'clamp(40px,8vw,60px)' }}>
-            <div style={{ width:40,height:40,border:'3px solid rgba(124,58,237,0.2)',borderTopColor:'#7c3aed',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 14px' }}/>
-            <p style={{ color:'var(--muted)' }}>Loading plans…</p>
+          <div style={{padding:'clamp(40px,8vw,60px)'}}>
+            <div style={{width:40,height:40,border:'3px solid rgba(124,58,237,0.2)',borderTopColor:'#7c3aed',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 14px'}}/>
+            <p style={{color:'var(--muted)'}}>Loading plans…</p>
           </div>
         )}
 
         {!loading && (
           <>
-            <div className="plan-grid plan-grid-inner" style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto' }}>
-              {plans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected}/>)}
-              {plans.length===0 && <p style={{ color:'var(--muted)',gridColumn:'1/-1',padding:40 }}>No plans available.</p>}
+            <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
+              {membershipPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected}/>)}
+              {membershipPlans.length===0 && <p style={{color:'var(--muted)',gridColumn:'1/-1',padding:40}}>No membership plans available.</p>}
             </div>
 
             {/* Payment methods banner */}
-            <div style={{ marginTop:'clamp(28px,4vw,44px)',padding:'clamp(14px,2vw,20px) clamp(16px,3vw,28px)',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:16,display:'inline-flex',flexWrap:'wrap',gap:'clamp(12px,2vw,24px)',alignItems:'center',justifyContent:'center' }}>
-              <span style={{ color:'#6b6490',fontSize:12,fontWeight:600,letterSpacing:1,textTransform:'uppercase' }}>Accepted payments</span>
-              {[
-                { icon:'💳', label:'Visa / Mastercard' },
-                { icon:'🏦', label:'Net Banking' },
-                { icon:'📱', label:'PhonePe UPI' },
-                { icon:'🟣', label:'GPay / Paytm UPI' },
-                { icon:'💬', label:'WhatsApp' },
-              ].map(p=>(
-                <div key={p.label} style={{ display:'flex',alignItems:'center',gap:6,fontSize:'clamp(11px,1.5vw,13px)',color:'#b8b0d4',fontWeight:500 }}>
+            <div style={{marginTop:'clamp(28px,4vw,44px)',padding:'clamp(14px,2vw,20px) clamp(16px,3vw,28px)',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:16,display:'inline-flex',flexWrap:'wrap',gap:'clamp(12px,2vw,24px)',alignItems:'center',justifyContent:'center'}}>
+              <span style={{color:'#6b6490',fontSize:12,fontWeight:600,letterSpacing:1,textTransform:'uppercase'}}>Accepted payments</span>
+              {[{icon:'💳',label:'Visa / Mastercard'},{icon:'🏦',label:'Net Banking'},{icon:'📱',label:'PhonePe UPI'},{icon:'🟣',label:'GPay / Paytm UPI'},{icon:'💬',label:'WhatsApp'}].map(p=>(
+                <div key={p.label} style={{display:'flex',alignItems:'center',gap:6,fontSize:'clamp(11px,1.5vw,13px)',color:'#b8b0d4',fontWeight:500}}>
                   <span>{p.icon}</span>{p.label}
                 </div>
               ))}
             </div>
-
-            {/* Perks */}
-            <div style={{ display:'flex',justifyContent:'center',flexWrap:'wrap',gap:'clamp(12px,2vw,24px)',marginTop:'clamp(18px,3vw,28px)' }}>
+            <div style={{display:'flex',justifyContent:'center',flexWrap:'wrap',gap:'clamp(12px,2vw,24px)',marginTop:'clamp(18px,3vw,28px)'}}>
               {['🔒 Secure Payments','💯 No Hidden Charges','🔄 Easy Renewal','📞 24/7 Support'].map(p=>(
-                <div key={p} style={{ color:'rgba(184,176,212,0.5)',fontSize:'clamp(11px,1.4vw,13px)' }}>{p}</div>
+                <div key={p} style={{color:'rgba(184,176,212,0.5)',fontSize:'clamp(11px,1.4vw,13px)'}}>{p}</div>
               ))}
             </div>
           </>
+        )}
+      </section>
+
+      {/* ─── SECTION 2: PERSONAL TRAINER PLANS ─── */}
+      <section id="personal-trainers" ref={ptRef} style={{background:'rgba(13,11,26,0.95)',padding:'clamp(48px,8vw,80px) 6%',borderTop:'1px solid rgba(124,58,237,0.15)',textAlign:'center'}}>
+        <div className="accent-line" style={{margin:'0 auto 14px'}}/>
+        <h2 className="section-title">
+          Personal <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Trainer Plans</span>
+        </h2>
+        <p className="section-sub" style={{margin:'0 auto clamp(28px,4vw,44px)'}}>
+          One-on-one coaching with certified trainers. Tailored programs for faster, real results.
+        </p>
+
+        {loading && (
+          <div style={{padding:'clamp(30px,6vw,50px)'}}>
+            <div style={{width:36,height:36,border:'3px solid rgba(124,58,237,0.2)',borderTopColor:'#7c3aed',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 12px'}}/>
+            <p style={{color:'var(--muted)'}}>Loading trainer plans…</p>
+          </div>
+        )}
+
+        {!loading && ptPlans.length > 0 && (
+          <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
+            {ptPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected}/>)}
+          </div>
+        )}
+
+        {!loading && ptPlans.length === 0 && (
+          <div style={{maxWidth:560,margin:'0 auto',background:'linear-gradient(145deg,#130f24,#1a1535)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:22,padding:'clamp(28px,4vw,44px)',textAlign:'center'}}>
+            <div style={{fontSize:48,marginBottom:16}}>🏋</div>
+            <h3 style={{color:'#bb86fc',fontSize:20,marginBottom:10,fontWeight:700}}>Personal Trainer Plans Coming Soon</h3>
+            <p style={{color:'rgba(184,176,212,0.6)',fontSize:14,lineHeight:1.7,marginBottom:22}}>
+              We're setting up personalised PT packages. Contact us on WhatsApp to get started with a custom plan today.
+            </p>
+            <a href="https://wa.me/918484805154?text=Hi!%20I%20am%20interested%20in%20a%20Personal%20Trainer%20plan%20at%20FFC." target="_blank" rel="noreferrer"
+              className="btn" style={{fontSize:14,padding:'11px 28px'}}>💬 Enquire on WhatsApp</a>
+          </div>
         )}
       </section>
 

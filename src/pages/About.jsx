@@ -96,7 +96,7 @@ export default function About() {
         </div>
 
         {/* ─── Trainers ─── */}
-        <div className="accent-line" style={{ margin:'0 auto 16px' }}/>
+        <div id="trainers" className="accent-line" style={{ margin:'0 auto 16px' }}/>
         <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, letterSpacing:2, color:'var(--text)', marginBottom:36 }}>
           Meet Our <span style={{ background:'linear-gradient(135deg,#bb86fc,#7c3aed)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Trainers</span>
         </h2>
@@ -110,7 +110,10 @@ export default function About() {
               <h4 style={{ color:'#bb86fc', fontSize:18, marginBottom:5, fontWeight:700 }}>{t.name}</h4>
               <p style={{ color:'var(--textSub)', fontSize:13, marginBottom:4 }}>{t.role} · {t.exp}</p>
               <p style={{ color:'var(--muted)', fontSize:13, marginBottom:24 }}>{t.spec}</p>
-              <Link to="/contact" className="btn" style={{ fontSize:13, padding:'10px 24px' }}>Book Session</Link>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <Link to="/contact" className="btn" style={{ fontSize:13, padding:'10px 24px' }}>Book Session</Link>
+                <Link to="/pricing#personal-trainers" className="btn btn-ghost" style={{ fontSize:12, padding:'8px 20px' }}>View PT Plans →</Link>
+              </div>
             </div>
           ))}
         </div>

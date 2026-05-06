@@ -488,7 +488,7 @@ function LoginPage({ onLogin }) {
             />
           </FR>
           {tab==='staff'&&<div style={{marginBottom:12,padding:'9px 14px',borderRadius:8,background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.2)',fontSize:12,color:'#9d8ec7',textAlign:'left',lineHeight:1.6}}>
-            👤 Staff accounts have restricted access. Revenue, Expenses, and Staff Salary sections are visible to main admin only.
+            👤 Staff accounts have restricted access. Revenue, Expenses, and Sub-Admin sections are visible to main admin only.
           </div>}
           {err&&<p style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'left'}}>⚠ {err}</p>}
           <Btn onClick={handle} disabled={loading} style={{width:'100%',justifyContent:'center',marginTop:8}}>
@@ -1321,7 +1321,7 @@ function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, 
   )
 }
 
-function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin' }) {
+function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onNavigate }) {
   const [saved,setSaved]=useState(false)
   const [syncing,setSyncing]=useState(false)
   const [syncResult,setSyncResult]=useState(null)
@@ -1389,25 +1389,17 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin' }) {
           {syncResult&&<div style={{marginBottom:12,padding:'10px 14px',borderRadius:8,background:syncResult.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:syncResult.ok?'#22c55e':'#ef4444',fontSize:13}}>{syncResult.ok?'✅':'❌'} {syncResult.msg}</div>}
           <Btn variant="success" onClick={syncSheets} disabled={syncing}>{syncing?<><Spinner size={13}/> Syncing…</>:'↑ Sync to Google Sheets'}</Btn>
         </Card>
-        {isMainAdmin&&<Card style={{padding:26,border:'1px solid rgba(124,58,237,0.25)'}}>
-          <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:12}}>👥 Staff Accounts (Sub-Admins)</div>
-          <p style={{fontSize:13,color:'#6b6490',marginBottom:14,lineHeight:1.7}}>
-            4 staff login accounts are available. Set credentials via environment variables<br/>
-            <code style={{background:'rgba(255,255,255,0.05)',padding:'2px 8px',borderRadius:6,fontSize:12,color:'#bb86fc'}}>SUB_ADMIN_1=username:password</code> … <code style={{background:'rgba(255,255,255,0.05)',padding:'2px 8px',borderRadius:6,fontSize:12,color:'#bb86fc'}}>SUB_ADMIN_4</code>
+        {isMainAdmin&&<Card style={{padding:26,border:'1px solid rgba(124,58,237,0.25)',cursor:'pointer'}} onClick={()=>onNavigate('subadmins')}>
+          <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:8}}>👥 Sub-Admin Accounts</div>
+          <p style={{fontSize:13,color:'#6b6490',marginBottom:0,lineHeight:1.7}}>
+            Manage up to 5 sub-admin login accounts with restricted access to admin panels.
           </p>
-          <div style={{background:'rgba(255,255,255,0.03)',borderRadius:10,border:'1px solid #2a2347',padding:'12px 16px',fontSize:13,lineHeight:2}}>
-            <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'4px 16px'}}>
-              <span style={{color:'#6b6490'}}>Default logins:</span><span style={{color:'#f0eeff'}}>staff1 / staff1234 &nbsp;•&nbsp; staff2 / staff2234</span>
-              <span style={{color:'#6b6490'}}></span><span style={{color:'#f0eeff'}}>staff3 / staff3234 &nbsp;•&nbsp; staff4 / staff4234</span>
-              <span style={{color:'#6b6490'}}>Access:</span><span style={{color:'#22c55e'}}>Members, Attendance, Offers, Leads, Trainers, Store, Pricing, Exercises</span>
-              <span style={{color:'#6b6490'}}>Restricted:</span><span style={{color:'#ef4444'}}>Revenue, Expenses, Staff Salary (main admin only)</span>
-            </div>
-          </div>
+          <div style={{marginTop:12,fontSize:12,color:'#7c3aed',fontWeight:600}}>Manage Sub-Admins →</div>
         </Card>}
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
           <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>{isMainAdmin?'Logging out will end your admin session.':'You are logged in as a staff account. Logging out will end your session.'}</p>
-          {!isMainAdmin&&<p style={{fontSize:12,color:'#f59e0b',marginBottom:14,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px'}}>👤 Staff mode — Revenue, Expenses &amp; Staff Salary sections are restricted.</p>}
+          {!isMainAdmin&&<p style={{fontSize:12,color:'#f59e0b',marginBottom:14,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px'}}>👤 Staff mode — Revenue, Expenses &amp; Sub-Admin sections are restricted.</p>}
           <Btn variant="danger" onClick={onLogout}>🚪 Logout</Btn>
         </Card>
       </div>
@@ -1427,7 +1419,7 @@ const NAV_ALL = [
   {id:'exercises',  icon:'🏃', label:'Exercises',  adminOnly:false },
   {id:'revenue',    icon:'📈', label:'Revenue',    adminOnly:true  },
   {id:'expenses',   icon:'💸', label:'Expenses',   adminOnly:true  },
-  {id:'staffpay',   icon:'🧾', label:'Staff Salary',adminOnly:true },
+  {id:'subadmins',  icon:'👥', label:'Sub-Admins', adminOnly:true  },
   {id:'settings',   icon:'⚙️',  label:'Settings',   adminOnly:false },
 ]
 
@@ -1549,152 +1541,166 @@ function Expenses({ apiFetch, toast, isMainAdmin=true }) {
 /* ══════════════════════════════════════════════════════
    STAFF SALARY SECTION — main admin only
    ══════════════════════════════════════════════════════ */
-function StaffSalary({ apiFetch, toast, isMainAdmin=true }) {
-  const [staff,   setStaff]   = useState([])
+function SubAdmins({ apiFetch, toast }) {
+  const MAX = 5
+  const [admins,  setAdmins]  = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal,   setModal]   = useState(null)
+  const [modal,   setModal]   = useState(null)  // null | 'add' | {id,username}
   const [saving,  setSaving]  = useState(false)
-  const blank = { name:'', role:'', phone:'', email:'', salary:'', joinDate:new Date().toISOString().slice(0,10), endDate:'', status:'Active', note:'' }
+  const blank = { username:'', password:'' }
   const [form, setForm] = useState(blank)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
 
   const load = async () => {
     setLoading(true)
-    try { setStaff(await apiFetch('/api/admin/staff')) } catch{}
+    try { setAdmins(await apiFetch('/api/admin/subadmins')) } catch{}
     setLoading(false)
   }
   useEffect(()=>{ load() },[])
 
   const save = async () => {
-    if (!form.name || !form.role) { toast('Name and role required','err'); return }
+    if (!form.username.trim()) { toast('Username is required','err'); return }
+    if (modal==='add' && !form.password.trim()) { toast('Password is required','err'); return }
+    if (form.username.trim().length < 3) { toast('Username must be at least 3 characters','err'); return }
+    if (form.password && form.password.length < 6) { toast('Password must be at least 6 characters','err'); return }
     setSaving(true)
     try {
-      if (modal==='add') await apiFetch('/api/admin/staff','POST',{...form, salary:parseFloat(form.salary)||0})
-      else await apiFetch(`/api/admin/staff/${modal.id}`,'PUT',{...form, salary:parseFloat(form.salary)||0})
-      await load(); toast('Staff saved!','ok'); setModal(null)
-    } catch { toast('Save failed','err') }
+      if (modal==='add') {
+        await apiFetch('/api/admin/subadmins','POST', { username: form.username.trim(), password: form.password.trim() })
+        toast('Sub-admin created!','ok')
+      } else {
+        const body = { username: form.username.trim() }
+        if (form.password.trim()) body.password = form.password.trim()
+        await apiFetch(`/api/admin/subadmins/${modal.id}`,'PUT', body)
+        toast('Sub-admin updated!','ok')
+      }
+      await load(); setModal(null)
+    } catch(e) { toast(e?.message||'Save failed','err') }
     setSaving(false)
   }
-  const del = async id => {
-    if (!confirm('Remove this staff member?')) return
-    try { await apiFetch(`/api/admin/staff/${id}`,'DELETE'); await load(); toast('Deleted','ok') }
-    catch { toast('Failed','err') }
-  }
 
-  const active    = staff.filter(s=>s.status==='Active')
-  const totalSal  = active.reduce((s,st)=>s+(st.salary||0),0)
+  const del = async (id, username) => {
+    if (!confirm(`Remove sub-admin "${username}"? They will lose access immediately.`)) return
+    try { await apiFetch(`/api/admin/subadmins/${id}`,'DELETE'); await load(); toast('Sub-admin removed','ok') }
+    catch { toast('Delete failed','err') }
+  }
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div>
-          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>STAFF & SALARY</h2>
-          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Staff records, salaries, join & end dates</p>
+          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>SUB-ADMIN ACCOUNTS</h2>
+          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Manage up to {MAX} staff login accounts with restricted admin access</p>
         </div>
-        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Staff</Btn>
+        {admins.length < MAX && <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Sub-Admin</Btn>}
       </div>
 
-      {/* Summary */}
+      {/* Slots overview */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
         <Card style={{padding:'18px 20px'}}>
-          <div style={{fontSize:22,marginBottom:6}}>👨‍💼</div>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#7c3aed'}}>{active.length}</div>
-          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Active Staff</div>
+          <div style={{fontSize:22,marginBottom:6}}>👥</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#7c3aed'}}>{admins.length}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Active Sub-Admins</div>
         </Card>
         <Card style={{padding:'18px 20px'}}>
-          <div style={{fontSize:22,marginBottom:6}}>🧾</div>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#f59e0b'}}>₹{totalSal.toLocaleString('en-IN')}</div>
-          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Monthly Salary Total</div>
+          <div style={{fontSize:22,marginBottom:6}}>🔓</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#22c55e'}}>{MAX - admins.length}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Slots Available</div>
         </Card>
         <Card style={{padding:'18px 20px'}}>
-          <div style={{fontSize:22,marginBottom:6}}>📋</div>
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#22c55e'}}>{staff.length}</div>
-          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Total Staff Records</div>
+          <div style={{fontSize:22,marginBottom:6}}>🔒</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:'#f59e0b'}}>{MAX}</div>
+          <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase'}}>Maximum Allowed</div>
         </Card>
       </div>
 
-      {/* Desktop table */}
-      <Card className="adm-table-desktop">
-        {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
-          <Table heads={['Name','Role','Phone','Salary/Month','Join Date','End Date','Status','Actions']} empty={staff.length===0?'No staff records yet':''}>
-            {staff.map(s=>(
-              <tr key={s.id} className="adm-row">
-                <Td>
-                  <div style={{fontWeight:600,fontSize:14}}>{s.name}</div>
-                  {s.email&&<div style={{fontSize:11,color:'#6b6490'}}>{s.email}</div>}
-                </Td>
-                <Td style={{fontSize:13,color:'#7c3aed',fontWeight:500}}>{s.role}</Td>
-                <Td style={{fontSize:13,color:'#6b6490'}}>{s.phone||'—'}</Td>
-                <Td style={{color:'#22c55e',fontWeight:700}}>₹{(s.salary||0).toLocaleString('en-IN')}</Td>
-                <Td style={{fontSize:13,color:'#6b6490',whiteSpace:'nowrap'}}>{s.joinDate||'—'}</Td>
-                <Td style={{fontSize:13,color:s.endDate?'#ef4444':'#6b6490',whiteSpace:'nowrap'}}>{s.endDate||'—'}</Td>
-                <Td><Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/></Td>
-                <Td><div style={{display:'flex',gap:6}}>
-                  <Btn size="sm" variant="ghost" onClick={()=>{setForm({...s,salary:String(s.salary||0)});setModal(s)}}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={()=>del(s.id)}>Del</Btn>
-                </div></Td>
-              </tr>
-            ))}
-          </Table>
-        )}
+      {/* Access info banner */}
+      <Card style={{marginBottom:20,padding:'14px 18px',border:'1px solid rgba(34,197,94,0.2)',background:'rgba(34,197,94,0.04)'}}>
+        <div style={{fontSize:13,color:'#6b6490',lineHeight:1.8}}>
+          <span style={{color:'#22c55e',fontWeight:600}}>✅ Sub-admin access: </span>
+          Members, Attendance, Offers, Leads, Trainers, Store, Pricing, Exercises
+          <span style={{color:'#ef4444',marginLeft:16,fontWeight:600}}>🚫 Restricted: </span>
+          Revenue, Expenses, Sub-Admin Management
+        </div>
       </Card>
 
-      {/* Mobile cards */}
-      <div className="member-card">
-        {staff.length===0 ? <p style={{textAlign:'center',color:'#6b6490',padding:40}}>No staff records yet</p>
-          : staff.map(s=>(
-          <Card key={s.id} style={{marginBottom:12,padding:18}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,gap:8}}>
-              <div>
-                <p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{s.name}</p>
-                <p style={{fontSize:13,color:'#7c3aed',fontWeight:500}}>{s.role}</p>
-              </div>
-              <Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
-              <div><span style={{color:'#6b6490'}}>Salary: </span><span style={{color:'#22c55e',fontWeight:600}}>₹{(s.salary||0).toLocaleString('en-IN')}/mo</span></div>
-              <div><span style={{color:'#6b6490'}}>Phone: </span><span>{s.phone||'—'}</span></div>
-              <div><span style={{color:'#6b6490'}}>Joined: </span><span>{s.joinDate||'—'}</span></div>
-              <div><span style={{color:'#6b6490'}}>End: </span><span style={{color:s.endDate?'#ef4444':'#6b6490'}}>{s.endDate||'—'}</span></div>
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <Btn size="sm" variant="ghost" onClick={()=>{setForm({...s,salary:String(s.salary||0)});setModal(s)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
-              <Btn size="sm" variant="danger" onClick={()=>del(s.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>
-            </div>
+      {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
+        <>
+          {/* Desktop table */}
+          <Card className="adm-table-desktop">
+            <Table heads={['#','Username','Created','Actions']} empty={admins.length===0?'No sub-admins yet. Click "+ Add Sub-Admin" to create one.':''}>
+              {admins.map((a,i)=>(
+                <tr key={a.id} className="adm-row">
+                  <Td style={{color:'#6b6490',width:40}}>{i+1}</Td>
+                  <Td>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>👤</div>
+                      <span style={{fontWeight:600,fontSize:14}}>{a.username}</span>
+                    </div>
+                  </Td>
+                  <Td style={{fontSize:13,color:'#6b6490'}}>{a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'}</Td>
+                  <Td><div style={{display:'flex',gap:6}}>
+                    <Btn size="sm" variant="ghost" onClick={()=>{setForm({username:a.username,password:''});setModal(a)}}>Edit</Btn>
+                    <Btn size="sm" variant="danger" onClick={()=>del(a.id,a.username)}>Remove</Btn>
+                  </div></Td>
+                </tr>
+              ))}
+            </Table>
           </Card>
-        ))}
-      </div>
 
-      {modal&&(
-        <Modal title={modal==='add'?'Add Staff Member':'Edit Staff Member'} onClose={()=>setModal(null)} wide>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-            <FR label="Full Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)} placeholder="e.g. Rahul Sharma" autoFocus/></FR>
-            <FR label="Role / Designation *"><input style={inp} value={form.role||''} onChange={e=>set('role',e.target.value)} placeholder="e.g. Trainer, Receptionist"/></FR>
+          {/* Mobile cards */}
+          <div className="member-card">
+            {admins.length===0 ? <p style={{textAlign:'center',color:'#6b6490',padding:40}}>No sub-admins yet</p>
+              : admins.map((a,i)=>(
+              <Card key={a.id} style={{marginBottom:12,padding:18}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>👤</div>
+                    <div>
+                      <p style={{fontWeight:700,fontSize:15,marginBottom:1}}>{a.username}</p>
+                      <p style={{fontSize:11,color:'#6b6490'}}>Sub-Admin #{i+1}</p>
+                    </div>
+                  </div>
+                  <Badge label="Active" color="green"/>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <Btn size="sm" variant="ghost" onClick={()=>{setForm({username:a.username,password:''});setModal(a)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+                  <Btn size="sm" variant="danger" onClick={()=>del(a.id,a.username)} style={{flex:1,justifyContent:'center'}}>Remove</Btn>
+                </div>
+              </Card>
+            ))}
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-            <FR label="Phone"><input style={inp} value={form.phone||''} onChange={e=>set('phone',e.target.value)} type="tel" placeholder="10-digit number"/></FR>
-            <FR label="Email"><input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} type="email" placeholder="staff@example.com"/></FR>
-          </div>
-          <FR label="Monthly Salary (₹)"><input style={inp} type="number" value={form.salary||''} onChange={e=>set('salary',e.target.value)} placeholder="e.g. 15000"/></FR>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-            <FR label="Join Date *"><input style={inp} type="date" value={form.joinDate||''} onChange={e=>set('joinDate',e.target.value)}/></FR>
-            <FR label="End Date (leave blank if current)"><input style={{...inp,color:form.endDate?'#ef4444':inp.color}} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/></FR>
-          </div>
-          <FR label="Status">
-            <select style={inp} value={form.status||'Active'} onChange={e=>set('status',e.target.value)}>
-              <option>Active</option><option>Inactive</option><option>Resigned</option><option>Terminated</option>
-            </select>
+
+          {admins.length >= MAX && (
+            <div style={{textAlign:'center',padding:'16px',color:'#f59e0b',fontSize:13,background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10,marginTop:8}}>
+              ⚠️ Maximum {MAX} sub-admins reached. Remove one to add another.
+            </div>
+          )}
+        </>
+      )}
+
+      {modal && (
+        <Modal title={modal==='add'?'Create Sub-Admin':'Edit Sub-Admin'} onClose={()=>setModal(null)}>
+          <FR label="Username *">
+            <input style={inp} value={form.username} onChange={e=>set('username',e.target.value)} placeholder="e.g. staff1" autoFocus autoComplete="off"/>
           </FR>
-          <FR label="Note (optional)"><input style={inp} value={form.note||''} onChange={e=>set('note',e.target.value)} placeholder="Any additional notes…"/></FR>
+          <FR label={modal==='add'?'Password *':'New Password (leave blank to keep current)'}>
+            <input style={inp} type="password" value={form.password} onChange={e=>set('password',e.target.value)} placeholder={modal==='add'?'Min 6 characters':'Leave blank to keep unchanged'} autoComplete="new-password"/>
+          </FR>
+          <div style={{padding:'10px 14px',borderRadius:8,background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',fontSize:12,color:'#6b6490',lineHeight:1.7,marginTop:4}}>
+            💡 Sub-admin can access: Members, Attendance, Offers, Leads, Trainers, Store, Pricing, Exercises.<br/>
+            Revenue, Expenses and Sub-Admin sections are restricted to main admin only.
+          </div>
           <div style={{display:'flex',gap:10,marginTop:12}}>
-            <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Staff'}</Btn>
-            <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+            <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:modal==='add'?'Create Sub-Admin':'Update Sub-Admin'}</Btn>
+            <Btn variant="ghost" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
           </div>
         </Modal>
       )}
     </div>
   )
 }
+
 
 /* ══════════════════════════════════════════════════════
    REVENUE SECTION — main admin only
@@ -1732,7 +1738,7 @@ function Revenue({ apiFetch, members, toast }) {
         {[
           {icon:'💰',label:'Total Revenue',value:`₹${(totalRevenue/1000).toFixed(1)}k`,color:'#22c55e'},
           {icon:'💸',label:'Expenses',value:`₹${(totalExp/1000).toFixed(1)}k`,color:'#ef4444'},
-          {icon:'🧾',label:'Staff Salary',value:`₹${(totalSalary/1000).toFixed(1)}k`,color:'#f59e0b'},
+          {icon:'🧾',label:'Total Expenses',value:`₹${(totalSalary/1000).toFixed(1)}k`,color:'#f59e0b'},
           {icon:'📈',label:'Net Profit',value:`₹${(netProfit/1000).toFixed(1)}k`,color:netProfit>=0?'#22c55e':'#ef4444'},
           {icon:'✅',label:'Paid Members',value:paidMembers.length,color:'#7c3aed'},
           {icon:'⚠️',label:'Unpaid Fees',value:unpaidMembers.length,color:'#f59e0b'},
@@ -1823,7 +1829,7 @@ function AccessDenied() {
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,letterSpacing:2,color:'#ef4444'}}>ACCESS RESTRICTED</h2>
       <p style={{color:'#6b6490',fontSize:14,textAlign:'center',maxWidth:320,lineHeight:1.7}}>
         This section is only accessible to the <strong style={{color:'#f0eeff'}}>Main Admin</strong> account.<br/>
-        Revenue, Expenses, and Staff Salary data is restricted to the owner.
+        Revenue, Expenses, and Sub-Admin data is restricted to the owner.
       </p>
     </div>
   )
@@ -1915,8 +1921,8 @@ export default function AdminPage() {
     // Main-admin-only pages
     revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members,isMainAdmin}} toast={showToast}/> : <AccessDenied/>,
     expenses:   isMainAdmin ? <Expenses  apiFetch={apiFetch} toast={showToast} isMainAdmin={isMainAdmin}/>    : <AccessDenied/>,
-    staffpay:   isMainAdmin ? <StaffSalary apiFetch={apiFetch} toast={showToast} isMainAdmin={isMainAdmin}/>  : <AccessDenied/>,
-    settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout} isMainAdmin={isMainAdmin} adminUser={adminUser}/>,
+    subadmins:  isMainAdmin ? <SubAdmins apiFetch={apiFetch} toast={showToast}/> : <AccessDenied/>,
+    settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout} isMainAdmin={isMainAdmin} adminUser={adminUser} onNavigate={setPage}/>,
   }
 
   return (

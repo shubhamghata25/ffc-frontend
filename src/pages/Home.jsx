@@ -43,9 +43,11 @@ export default function Home() {
   const [tIdx,setTIdx]=useState(0)
   useEffect(()=>{ const t=setInterval(()=>setTIdx(i=>(i+1)%TESTIMONIALS.length),3400); return()=>clearInterval(t) },[])
   const [offer,setOffer]=useState(null)
+  const [trainers,setTrainers]=useState([])
   useEffect(()=>{
     const api=import.meta.env.VITE_API_URL; if(!api)return
     fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
+    fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainers(d)}).catch(()=>{})
   },[])
 
   return (
@@ -233,6 +235,35 @@ export default function Home() {
               <div key={i} onClick={()=>setTIdx(i)} style={{width:i===tIdx?22:8,height:8,borderRadius:4,background:i===tIdx?'#7c3aed':'rgba(124,58,237,0.25)',cursor:'pointer',transition:'all .3s'}}/>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── PERSONAL TRAINERS ─── */}
+      <section style={{background:'rgba(13,11,26,0.95)',padding:'clamp(48px,8vw,80px) 6%',borderTop:'1px solid rgba(124,58,237,0.1)',textAlign:'center'}}>
+        <div className="accent-line" style={{margin:'0 auto 16px'}}/>
+        <h2 className="section-title" style={{marginBottom:10}}>Our Personal <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Trainers</span></h2>
+        <p className="section-sub" style={{margin:'0 auto 36px',fontSize:'clamp(13px,2vw,16px)'}}>Certified professionals dedicated to your transformation journey.</p>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,22px)',maxWidth:900,margin:'0 auto 36px'}}>
+          {(trainers.length>0?trainers:[
+            {name:'Nagendra Singh',role:'Head Trainer',exp:'8+ Years',spec:'Strength & Fat Loss',photo:''},
+            {name:'Depankar Bera',role:'Fitness Coach',exp:'5+ Years',spec:'Weight Loss & Nutrition',photo:''},
+          ]).filter(t=>t.status!=='Inactive').map((t,i)=>(
+            <div key={t._uid||t.name||i} style={{background:'linear-gradient(145deg,#130f24,#1a1535)',borderRadius:20,border:'1px solid rgba(124,58,237,0.18)',padding:'clamp(20px,3vw,32px) clamp(16px,2vw,24px)',textAlign:'center',transition:'transform .3s,box-shadow .3s,border-color .3s'}}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-8px)';e.currentTarget.style.boxShadow='0 16px 48px rgba(124,58,237,0.25)';e.currentTarget.style.borderColor='rgba(124,58,237,0.4)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';e.currentTarget.style.borderColor='rgba(124,58,237,0.18)'}}>
+              {t.photo
+                ?<img src={t.photo} alt={t.name} style={{width:80,height:80,borderRadius:'50%',objectFit:'cover',border:'3px solid #7c3aed',margin:'0 auto 16px',display:'block',boxShadow:'0 0 24px rgba(124,58,237,0.4)'}}/>
+                :<div style={{width:80,height:80,borderRadius:'50%',background:'rgba(124,58,237,0.12)',border:'3px solid #7c3aed',margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32,boxShadow:'0 0 24px rgba(124,58,237,0.3)'}}>🏋</div>
+              }
+              <h4 style={{color:'#bb86fc',fontSize:'clamp(15px,2vw,18px)',marginBottom:4,fontWeight:700}}>{t.name}</h4>
+              <p style={{color:'rgba(184,176,212,0.6)',fontSize:12,marginBottom:4}}>{t.role} · {t.exp}</p>
+              <p style={{color:'rgba(184,176,212,0.45)',fontSize:12,marginBottom:20}}>{t.spec}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+          <Link to="/about#trainers" className="btn btn-ghost" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 28px'}}>Meet Our Trainers →</Link>
+          <Link to="/pricing#personal-trainers" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 28px'}}>Get a Trainer Plan →</Link>
         </div>
       </section>
 
