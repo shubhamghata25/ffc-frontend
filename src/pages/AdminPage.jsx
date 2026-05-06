@@ -1083,9 +1083,9 @@ function Attendance({ apiFetch, reload, toast }) {
   )
 }
 
-function Offers({ apiFetch, token, offers, reload, toast }) {
+function Offers({ apiFetch, token, offers, reload, toast, isMainAdmin=true }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
-  const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:''}
+  const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:'',hasSpecialPlan:false,planLabel:'',planPrice:0,planOrigPrice:0,planPeriod:'month',planFeatures:'',linkedPlanId:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.title)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/offers','POST',form);else await apiFetch(`/api/admin/offers/${modal.id}`,'PUT',form);await reload();toast('Offer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const toggle=async o=>{const u={...o,status:o.status==='ON'?'OFF':'ON'};try{await apiFetch(`/api/admin/offers/${o.id}`,'PUT',u);await reload();toast(u.status==='ON'?'🔴 Offer is LIVE!':'Offer deactivated','ok')}catch{toast('Update failed','err')}}
@@ -1107,7 +1107,7 @@ function Offers({ apiFetch, token, offers, reload, toast }) {
             <div style={{padding:22}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,flexWrap:'wrap',gap:8}}>
                 <Badge label={o.status==='ON'?'🔴 LIVE':'⚫ Hidden'} color={o.status==='ON'?'green':'red'}/>
-                <div style={{display:'flex',gap:6}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...o});setModal(o)}}>Edit</Btn><Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn></div>
+                <div style={{display:'flex',gap:6}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...o,hasSpecialPlan:!!o.hasSpecialPlan,planLabel:o.planLabel||'',planPrice:o.planPrice||0,planOrigPrice:o.planOrigPrice||0,planPeriod:o.planPeriod||'month',planFeatures:o.planFeatures||'',linkedPlanId:o.linkedPlanId||''});setModal(o)}}>Edit</Btn>{isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn>}</div>
               </div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:6}}>{o.title}</div>
               <div style={{fontSize:13,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{o.description}</div>
@@ -1132,6 +1132,49 @@ function Offers({ apiFetch, token, offers, reload, toast }) {
               {form.poster&&<div style={{fontSize:12,color:'#22c55e',marginTop:-8,marginBottom:8}}>✅ Poster uploaded</div>}
             </div>
           </div>
+          {/* Special Offer Plan */}
+          <div style={{padding:'14px 16px',background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.25)',borderRadius:10,marginTop:4}}>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:form.hasSpecialPlan?14:0}}>
+              <input type="checkbox" checked={!!form.hasSpecialPlan} onChange={e=>set('hasSpecialPlan',e.target.checked)} style={{width:16,height:16,accentColor:'#7c3aed'}}/>
+              <span style={{fontWeight:600,fontSize:13,color:'#bb86fc'}}>🎟️ Attach a Special Offer Plan to this poster</span>
+            </label>
+            {form.hasSpecialPlan&&(
+              <div>
+                <div style={{fontSize:12,color:'#6b6490',marginBottom:12,padding:'8px 12px',background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid #2a2347'}}>
+                  💡 A plan will be <strong style={{color:'#f0eeff'}}>automatically created</strong> in the Pricing section with this offer's details. It activates/deactivates with the offer.
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+                  <FR label="Plan Name *">
+                    <input style={inp} value={form.planLabel||''} onChange={e=>set('planLabel',e.target.value)} placeholder="e.g. Diwali Special – 2 Months"/>
+                  </FR>
+                  <FR label="Duration">
+                    <select style={inp} value={form.planPeriod||'month'} onChange={e=>set('planPeriod',e.target.value)}>
+                      <option value="week">1 Week</option>
+                      <option value="month">1 Month</option>
+                      <option value="2month">2 Months</option>
+                      <option value="quarter">3 Months (Quarter)</option>
+                      <option value="half">6 Months (Half Yearly)</option>
+                      <option value="year">1 Year</option>
+                    </select>
+                  </FR>
+                  <FR label="Offer Price (₹) *">
+                    <input style={{...inp,color:'#22c55e'}} type="number" value={form.planPrice||''} onChange={e=>set('planPrice',parseFloat(e.target.value)||0)} placeholder="e.g. 999"/>
+                  </FR>
+                  <FR label="Original Price (₹)">
+                    <input style={{...inp,color:'#6b6490'}} type="number" value={form.planOrigPrice||''} onChange={e=>set('planOrigPrice',parseFloat(e.target.value)||0)} placeholder="e.g. 1199"/>
+                  </FR>
+                </div>
+                <FR label="Plan Features (comma-separated)">
+                  <input style={inp} value={form.planFeatures||''} onChange={e=>set('planFeatures',e.target.value)} placeholder="Full gym access, Diet consultation, Group classes"/>
+                </FR>
+                {form.planOrigPrice>0&&form.planPrice>0&&form.planOrigPrice>form.planPrice&&(
+                  <div style={{fontSize:12,color:'#22c55e',marginTop:4}}>
+                    🏷️ {Math.round(((form.planOrigPrice-form.planPrice)/form.planOrigPrice)*100)}% discount will be shown on pricing page
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div style={{display:'flex',gap:10,marginTop:8}}>
             <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Offer'}</Btn>
             <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
@@ -1142,7 +1185,7 @@ function Offers({ apiFetch, token, offers, reload, toast }) {
   )
 }
 
-function Leads({ apiFetch, leads, reload, toast }) {
+function Leads({ apiFetch, leads, reload, toast, isMainAdmin=true }) {
   const [search,setSearch]=useState('')
   const filtered=leads.filter(l=>l.name.toLowerCase().includes(search.toLowerCase())||l.phone.includes(search))
   const wa=(phone,name)=>window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hello ${name}! Thank you for contacting Friends Fitness Club.`)}`, '_blank')
@@ -1160,7 +1203,7 @@ function Leads({ apiFetch, leads, reload, toast }) {
               <Td style={{fontWeight:500}}>{l.name}</Td><Td style={{color:'#6b6490',fontSize:13}}>{l.email}</Td><Td style={{fontSize:13}}>{l.phone}</Td>
               <Td style={{fontSize:12,color:'#6b6490',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.message}</Td>
               <Td style={{fontSize:12,color:'#6b6490',whiteSpace:'nowrap'}}>{l.date}</Td>
-              <Td><div style={{display:'flex',gap:6}}><Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)}>💬 WA</Btn><Btn size="sm" variant="danger" onClick={()=>del(l.id)}>Del</Btn></div></Td>
+              <Td><div style={{display:'flex',gap:6}}><Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)}>💬 WA</Btn>{isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(l.id)}>Del</Btn>}</div></Td>
             </tr>
           ))}
         </Table>
@@ -1177,7 +1220,7 @@ function Leads({ apiFetch, leads, reload, toast }) {
             <p style={{fontSize:12,color:'#6b6490',marginBottom:14,lineHeight:1.6}}>{l.message}</p>
             <div style={{display:'flex',gap:8}}>
               <Btn size="sm" variant="primary" onClick={()=>wa(l.phone,l.name)} style={{flex:1,justifyContent:'center'}}>💬 WhatsApp</Btn>
-              <Btn size="sm" variant="danger"  onClick={()=>del(l.id)} style={{flex:1,justifyContent:'center'}}>Delete</Btn>
+              {isMainAdmin&&<Btn size="sm" variant="danger"  onClick={()=>del(l.id)} style={{flex:1,justifyContent:'center'}}>Delete</Btn>}
             </div>
           </Card>
         ))}
@@ -1186,9 +1229,9 @@ function Leads({ apiFetch, leads, reload, toast }) {
   )
 }
 
-function Trainers({ apiFetch, token, trainers, reload, toast }) {
+function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, plans=[] }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
-  const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:''}
+  const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:'',ptEnabled:false,ptPlanId:'',ptPlanLabel:'',bio:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.name)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/trainers','POST',form);else await apiFetch(`/api/admin/trainers/${modal.id}`,'PUT',form);await reload();toast('Trainer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const del=async id=>{try{await apiFetch(`/api/admin/trainers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
@@ -1207,8 +1250,18 @@ function Trainers({ apiFetch, token, trainers, reload, toast }) {
               <div><div style={{fontSize:17,fontWeight:700,marginBottom:2}}>{t.name}</div><div style={{fontSize:13,color:'#7c3aed',fontWeight:600}}>{t.role}</div><Badge label={t.status} color={t.status==='Active'?'green':'red'}/></div>
             </div>
             <div style={{fontSize:13,color:'#6b6490',marginBottom:2}}>⏱ {t.exp}</div>
-            <div style={{fontSize:13,color:'#6b6490',marginBottom:20}}>🎯 {t.spec}</div>
-            <div style={{display:'flex',gap:8}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...t});setModal(t)}}>Edit</Btn><Btn size="sm" variant="danger" onClick={()=>del(t.id)}>Delete</Btn></div>
+            <div style={{fontSize:13,color:'#6b6490',marginBottom:t.ptEnabled?6:20}}>🎯 {t.spec}</div>
+            {t.ptEnabled&&<div style={{fontSize:12,color:'#7c3aed',fontWeight:600,marginBottom:t.bio?4:20,padding:'3px 10px',background:'rgba(124,58,237,0.1)',borderRadius:20,display:'inline-block'}}>🏋 Offers PT Sessions</div>}
+            {t.bio&&<div style={{fontSize:12,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{t.bio}</div>}
+            <div style={{display:'flex',gap:8}}>
+                {t.ptEnabled&&t.ptPlanId&&(
+                  <a href={`/pricing?pt=1&planId=${t.ptPlanId}&trainer=${encodeURIComponent(t.name)}`} target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                    <Btn size="sm" variant="primary">🏋 View PT Plan</Btn>
+                  </a>
+                )}
+                <Btn size="sm" variant="ghost" onClick={()=>{setForm({...t,ptEnabled:!!t.ptEnabled,ptPlanId:t.ptPlanId||'',ptPlanLabel:t.ptPlanLabel||'',bio:t.bio||''});setModal(t)}}>Edit</Btn>
+                {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(t.id)}>Delete</Btn>}
+              </div>
           </Card>
         ))}
       </div>
@@ -1223,6 +1276,40 @@ function Trainers({ apiFetch, token, trainers, reload, toast }) {
               <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option>Active</option><option>Inactive</option></select></FR>
             </div>
             <IU value={form.photo} onChange={v=>set('photo',v)} label="Trainer Photo" hint="Square photo. Max 5MB." maxW={400} aspect="square"/>
+          </div>
+          {/* Bio */}
+          <FR label="Bio / About (optional)">
+            <textarea style={{...inp,height:60,resize:'vertical'}} value={form.bio||''} onChange={e=>set('bio',e.target.value)} placeholder="Short description shown on public trainer page…"/>
+          </FR>
+          {/* PT Plan Section */}
+          <div style={{padding:'14px 16px',background:'rgba(124,58,237,0.07)',border:'1px solid rgba(124,58,237,0.25)',borderRadius:10}}>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:form.ptEnabled?14:0}}>
+              <input type="checkbox" checked={!!form.ptEnabled} onChange={e=>set('ptEnabled',e.target.checked)} style={{width:16,height:16,accentColor:'#7c3aed'}}/>
+              <span style={{fontWeight:600,fontSize:13,color:'#bb86fc'}}>🏋 Offers Personal Training (PT) Sessions</span>
+            </label>
+            {form.ptEnabled&&(
+              <div>
+                <FR label="PT Plan Label (shown on pricing page)">
+                  <input style={inp} value={form.ptPlanLabel||''} onChange={e=>set('ptPlanLabel',e.target.value)} placeholder="e.g. PT with Rahul – 1 Month"/>
+                </FR>
+                <FR label="Link to Pricing Plan">
+                  <select style={inp} value={form.ptPlanId||''} onChange={e=>{
+                    const sel = plans.find(p=>p.id===e.target.value)
+                    set('ptPlanId', e.target.value)
+                    if (sel) set('ptPlanLabel', sel.label)
+                  }}>
+                    <option value="">— Select a plan from Pricing —</option>
+                    {plans.filter(p=>p.active!==false).map(p=>(
+                      <option key={p.id} value={p.id}>{p.label} – ₹{p.effectivePrice||p.price}</option>
+                    ))}
+                  </select>
+                </FR>
+                <div style={{fontSize:12,color:'#6b6490',marginTop:4,padding:'8px 12px',background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid #2a2347'}}>
+                  💡 When a user clicks <strong style={{color:'#f0eeff'}}>"Book PT Session"</strong> on the trainer's public profile, they'll be taken to the Pricing page with this plan highlighted.
+                  <br/>URL: <code style={{color:'#bb86fc',fontSize:11}}>/pricing?pt=1&planId={form.ptPlanId||'...'}&trainer={encodeURIComponent(form.name||'...')}</code>
+                </div>
+              </div>
+            )}
           </div>
           <div style={{display:'flex',gap:10,marginTop:16}}>
             <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:'Save Trainer'}</Btn>
@@ -1348,7 +1435,7 @@ const NAV_ALL = [
 /* ══════════════════════════════════════════════════════
    EXPENSES SECTION — main admin only
    ══════════════════════════════════════════════════════ */
-function Expenses({ apiFetch, toast }) {
+function Expenses({ apiFetch, toast, isMainAdmin=true }) {
   const [expenses, setExpenses] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [modal,    setModal]    = useState(null)
@@ -1462,7 +1549,7 @@ function Expenses({ apiFetch, toast }) {
 /* ══════════════════════════════════════════════════════
    STAFF SALARY SECTION — main admin only
    ══════════════════════════════════════════════════════ */
-function StaffSalary({ apiFetch, toast }) {
+function StaffSalary({ apiFetch, toast, isMainAdmin=true }) {
   const [staff,   setStaff]   = useState([])
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState(null)
@@ -1623,13 +1710,18 @@ function Revenue({ apiFetch, members, toast }) {
       .finally(()=>setLoading(false))
   },[])
 
-  const paidMembers  = members.filter(m=>m.fee==='Paid')
-  const unpaidMembers= members.filter(m=>m.fee==='Unpaid')
-  const totalRevenue = paidMembers.reduce((s,m)=>{ const n=parseInt((m.plan||'').replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
-  const totalExp     = summary ? Object.values(summary.expByMonth||{}).reduce((s,v)=>s+v,0) : 0
-  const netProfit    = totalRevenue - totalExp
+  const paidMembers   = members.filter(m=>m.fee==='Paid')
+  const unpaidMembers = members.filter(m=>m.fee==='Unpaid')
+  const totalRevenue  = summary ? Object.values(summary.monthly||{}).reduce((s,v)=>s+v,0)
+                        : paidMembers.reduce((s,m)=>{ const n=parseInt((m.plan||'').replace(/[^\d]/g,'')); return s+(isNaN(n)?0:n) },0)
+  const totalExp      = summary ? Object.values(summary.expByMonth||{}).reduce((s,v)=>s+v,0) : 0
+  const totalSalary   = summary?.totalMonthlySalary || 0
+  const netProfit     = totalRevenue - totalExp - totalSalary
 
-  const months = summary ? [...new Set([...Object.keys(summary.monthly||{}), ...Object.keys(summary.expByMonth||{})])].sort().reverse().slice(0,12) : []
+  const months = summary ? [...new Set([
+    ...Object.keys(summary.monthly||{}),
+    ...Object.keys(summary.expByMonth||{})
+  ])].sort().reverse().slice(0,12) : []
 
   return (
     <div>
@@ -1639,11 +1731,11 @@ function Revenue({ apiFetch, members, toast }) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:28}}>
         {[
           {icon:'💰',label:'Total Revenue',value:`₹${(totalRevenue/1000).toFixed(1)}k`,color:'#22c55e'},
-          {icon:'💸',label:'Total Expenses',value:`₹${(totalExp/1000).toFixed(1)}k`,color:'#ef4444'},
+          {icon:'💸',label:'Expenses',value:`₹${(totalExp/1000).toFixed(1)}k`,color:'#ef4444'},
+          {icon:'🧾',label:'Staff Salary',value:`₹${(totalSalary/1000).toFixed(1)}k`,color:'#f59e0b'},
           {icon:'📈',label:'Net Profit',value:`₹${(netProfit/1000).toFixed(1)}k`,color:netProfit>=0?'#22c55e':'#ef4444'},
           {icon:'✅',label:'Paid Members',value:paidMembers.length,color:'#7c3aed'},
           {icon:'⚠️',label:'Unpaid Fees',value:unpaidMembers.length,color:'#f59e0b'},
-          {icon:'🧾',label:'Monthly Salary',value:summary?`₹${(summary.totalMonthlySalary/1000).toFixed(1)}k`:'…',color:'#f59e0b'},
         ].map(({icon,label,value,color})=>(
           <Card key={label} style={{padding:'18px 20px'}}>
             <div style={{fontSize:22,marginBottom:6}}>{icon}</div>
@@ -1656,21 +1748,24 @@ function Revenue({ apiFetch, members, toast }) {
       {loading ? <div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div> : (
         <Card>
           <div style={{padding:'16px 18px 12px',fontWeight:600,fontSize:14,borderBottom:'1px solid #2a2347'}}>Monthly Breakdown</div>
-          <Table heads={['Month','Revenue','Expenses','Net']}>
+          <Table heads={['Month','Revenue','Expenses','Salary','Net Profit']}>
             {months.map(m=>{
-              const rev = summary.monthly?.[m]||0
-              const exp = summary.expByMonth?.[m]||0
-              const net = rev - exp
+              const bd  = summary.breakdown?.[m] || {}
+              const rev = bd.revenue ?? (summary.monthly?.[m]||0)
+              const exp = bd.expenses ?? (summary.expByMonth?.[m]||0)
+              const sal = bd.salary ?? 0
+              const net = rev - exp - sal
               return (
                 <tr key={m} className="adm-row">
                   <Td style={{fontWeight:500}}>{m}</Td>
                   <Td style={{color:'#22c55e',fontWeight:600}}>₹{rev.toLocaleString('en-IN')}</Td>
                   <Td style={{color:'#ef4444',fontWeight:600}}>₹{exp.toLocaleString('en-IN')}</Td>
+                  <Td style={{color:'#f59e0b',fontWeight:600}}>₹{sal.toLocaleString('en-IN')}</Td>
                   <Td style={{color:net>=0?'#22c55e':'#ef4444',fontWeight:700}}>₹{net.toLocaleString('en-IN')}</Td>
                 </tr>
               )
             })}
-            {months.length===0&&<tr><td colSpan={4} style={{textAlign:'center',color:'#6b6490',padding:40}}>No data yet</td></tr>}
+            {months.length===0&&<tr><td colSpan={5} style={{textAlign:'center',color:'#6b6490',padding:40}}>No data yet</td></tr>}
           </Table>
         </Card>
       )}
@@ -1801,6 +1896,7 @@ export default function AdminPage() {
   const shared = {
     apiFetch,
     token,
+    isMainAdmin,
     ImageUploader: (props) => <ImageUploader token={token} {...props}/>,
     Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C,
     toast: showToast,
@@ -1810,16 +1906,16 @@ export default function AdminPage() {
     dashboard:  <Dashboard  {...{apiFetch,members,products,leads,offers,isMainAdmin,adminUser}} onNavigate={setPage}/>,
     members:    <Members    {...{apiFetch,token,members,plans,isMainAdmin}} reload={loadAll} toast={showToast}/>,
     attendance: <Attendance {...{apiFetch}} reload={loadAll} toast={showToast}/>,
-    offers:     <Offers     {...{apiFetch,token,offers}} reload={loadAll} toast={showToast}/>,
-    leads:      <Leads      {...{apiFetch,leads}} reload={loadAll} toast={showToast}/>,
-    trainers:   <Trainers   {...{apiFetch,token,trainers}} reload={loadAll} toast={showToast}/>,
-    store:      <AdminStore     {...shared}/>,
-    pricing:    <AdminPricing   {...shared}/>,
-    exercises:  <AdminExercises {...shared}/>,
+    offers:     <Offers     {...{apiFetch,token,offers,isMainAdmin}} reload={loadAll} toast={showToast}/>,
+    leads:      <Leads      {...{apiFetch,leads,isMainAdmin}} reload={loadAll} toast={showToast}/>,
+    trainers:   <Trainers   {...{apiFetch,token,trainers,isMainAdmin,plans}} reload={loadAll} toast={showToast}/>,
+    store:      <AdminStore     {...shared} isMainAdmin={isMainAdmin}/>,
+    pricing:    <AdminPricing   {...shared} isMainAdmin={isMainAdmin}/>,
+    exercises:  <AdminExercises {...shared} isMainAdmin={isMainAdmin}/>,
     // Main-admin-only pages
-    revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members}} toast={showToast}/> : <AccessDenied/>,
-    expenses:   isMainAdmin ? <Expenses  apiFetch={apiFetch} toast={showToast}/>    : <AccessDenied/>,
-    staffpay:   isMainAdmin ? <StaffSalary apiFetch={apiFetch} toast={showToast}/>  : <AccessDenied/>,
+    revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members,isMainAdmin}} toast={showToast}/> : <AccessDenied/>,
+    expenses:   isMainAdmin ? <Expenses  apiFetch={apiFetch} toast={showToast} isMainAdmin={isMainAdmin}/>    : <AccessDenied/>,
+    staffpay:   isMainAdmin ? <StaffSalary apiFetch={apiFetch} toast={showToast} isMainAdmin={isMainAdmin}/>  : <AccessDenied/>,
     settings:   <Settings  apiFetch={apiFetch} onLogout={handleLogout} isMainAdmin={isMainAdmin} adminUser={adminUser}/>,
   }
 
