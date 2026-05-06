@@ -43,11 +43,11 @@ export default function Home() {
   const [tIdx,setTIdx]=useState(0)
   useEffect(()=>{ const t=setInterval(()=>setTIdx(i=>(i+1)%TESTIMONIALS.length),3400); return()=>clearInterval(t) },[])
   const [offer,setOffer]=useState(null)
-  const [trainers,setTrainers]=useState([])
+  const [trainersList,setTrainersList]=useState([])
   useEffect(()=>{
     const api=import.meta.env.VITE_API_URL; if(!api)return
     fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
-    fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainers(d)}).catch(()=>{})
+    fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
   },[])
 
   return (
@@ -244,7 +244,7 @@ export default function Home() {
         <h2 className="section-title" style={{marginBottom:10}}>Our Personal <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Trainers</span></h2>
         <p className="section-sub" style={{margin:'0 auto 36px',fontSize:'clamp(13px,2vw,16px)'}}>Certified professionals dedicated to your transformation journey.</p>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,22px)',maxWidth:900,margin:'0 auto 36px'}}>
-          {(trainers.length>0?trainers:[
+          {(trainersList.length>0?trainersList:[
             {name:'Nagendra Singh',role:'Head Trainer',exp:'8+ Years',spec:'Strength & Fat Loss',photo:''},
             {name:'Depankar Bera',role:'Fitness Coach',exp:'5+ Years',spec:'Weight Loss & Nutrition',photo:''},
           ]).filter(t=>t.status!=='Inactive').map((t,i)=>(
