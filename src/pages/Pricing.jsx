@@ -160,7 +160,7 @@ function PayModal({ plan, onClose, onDone }) {
 }
 
 /* ─── Plan Card ─── */
-function PlanCard({ plan, onSelect }) {
+function PlanCard({ plan, onSelect, isHighlighted=false }) {
   const discounted = plan.originalPrice && plan.originalPrice > plan.price
   const saving     = discounted ? plan.originalPrice - plan.price : 0
 
@@ -171,15 +171,22 @@ function PlanCard({ plan, onSelect }) {
       padding:      'clamp(22px,3vw,36px) clamp(16px,2.5vw,28px)',
       textAlign:    'center',
       position:     'relative',
-      border:       plan.popular ? '2px solid rgba(156,89,247,0.7)' : '1px solid rgba(124,58,237,0.15)',
-      boxShadow:    plan.popular ? '0 0 48px rgba(124,58,237,0.3)' : 'none',
+      border:       isHighlighted ? '2px solid #7c3aed' : plan.popular ? '2px solid rgba(156,89,247,0.7)' : '1px solid rgba(124,58,237,0.15)',
+      boxShadow:    isHighlighted ? '0 0 48px rgba(124,58,237,0.5)' : plan.popular ? '0 0 48px rgba(124,58,237,0.3)' : 'none',
+      animation:    isHighlighted ? 'pulseGlow 2s ease-in-out infinite' : 'none',
       transition:   'transform .3s,box-shadow .3s',
       display:      'flex', flexDirection:'column',
     }}
-      onMouseEnter={e=>{ if(!plan.popular){ e.currentTarget.style.transform='translateY(-6px)'; e.currentTarget.style.boxShadow='0 16px 40px rgba(124,58,237,0.2)' } }}
-      onMouseLeave={e=>{ if(!plan.popular){ e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='' } }}>
+      onMouseEnter={e=>{ if(!plan.popular&&!isHighlighted){ e.currentTarget.style.transform='translateY(-6px)'; e.currentTarget.style.boxShadow='0 16px 40px rgba(124,58,237,0.2)' } }}
+      onMouseLeave={e=>{ if(!plan.popular&&!isHighlighted){ e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='' } }}>
 
-      {plan.popular && (
+      {isHighlighted && (
+        <div style={{ position:'absolute',top:-15,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#22c55e,#16a34a)',color:'#fff',borderRadius:20,padding:'5px 20px',fontSize:11,fontWeight:800,letterSpacing:1.5,whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(34,197,94,0.5)' }}>
+          🔥 OFFER APPLIED
+        </div>
+      )}
+
+      {!isHighlighted && plan.popular && (
         <div style={{ position:'absolute',top:-15,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',borderRadius:20,padding:'5px 20px',fontSize:11,fontWeight:800,letterSpacing:1.5,whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(124,58,237,0.5)' }}>
           ⭐ MOST POPULAR
         </div>
@@ -226,13 +233,110 @@ function PlanCard({ plan, onSelect }) {
   )
 }
 
+/* ─── PT Plan Card — premium trainer card with cap ─── */
+function PTCard({ plan, trainer, onSelect }) {
+  const max      = plan.maxStudents || 5
+  const enrolled = plan.enrolledCount || 0
+  const isFull   = enrolled >= max
+  const pct      = Math.min(100, Math.round((enrolled / max) * 100))
+  const discounted = plan.originalPrice && plan.originalPrice > plan.price
+  const WHATSAPP = 'https://wa.me/918484805154?text=Hi!%20I%20am%20interested%20in%20a%20Personal%20Trainer%20plan%20at%20FFC.'
+
+  return (
+    <div style={{
+      background:'linear-gradient(145deg,#130f24,#1a1535)',
+      borderRadius:'clamp(16px,2vw,24px)',
+      border: isFull ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(124,58,237,0.2)',
+      overflow:'hidden', display:'flex', flexDirection:'column',
+      transition:'transform .3s,box-shadow .3s',
+    }}
+      onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-6px)';e.currentTarget.style.boxShadow='0 20px 48px rgba(124,58,237,0.25)'}}
+      onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
+
+      {/* Trainer photo banner */}
+      <div style={{position:'relative',height:180,background:'linear-gradient(135deg,#1a0a3e,#2d1260)',overflow:'hidden'}}>
+        {trainer?.photo
+          ? <img src={trainer.photo} alt={trainer.name} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}}/>
+          : <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:64}}>🏋</div>
+        }
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(13,11,26,0.95) 0%,transparent 55%)'}}/>
+        {/* Price badge */}
+        <div style={{position:'absolute',top:14,right:14,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',borderRadius:20,padding:'6px 16px',textAlign:'center',boxShadow:'0 4px 16px rgba(124,58,237,0.5)'}}>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:'#fff',letterSpacing:1}}>₹{plan.price.toLocaleString()}</div>
+          <div style={{fontSize:9,color:'rgba(255,255,255,0.7)',textTransform:'uppercase',letterSpacing:1}}>per {plan.period}</div>
+        </div>
+        {isFull && (
+          <div style={{position:'absolute',top:14,left:14,background:'rgba(239,68,68,0.9)',borderRadius:20,padding:'4px 12px',fontSize:11,fontWeight:700,color:'#fff'}}>● FULL</div>
+        )}
+        {/* Trainer name overlay */}
+        {trainer && (
+          <div style={{position:'absolute',bottom:14,left:16,right:16}}>
+            <div style={{fontWeight:700,fontSize:17,color:'#fff',marginBottom:2}}>{trainer.name}</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.7)'}}>{trainer.role} · {trainer.exp}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{padding:'clamp(16px,2vw,24px)',flex:1,display:'flex',flexDirection:'column'}}>
+        <h3 style={{color:'#bb86fc',fontSize:'clamp(15px,2vw,18px)',marginBottom:4,fontWeight:700}}>{plan.label}</h3>
+        {trainer?.spec && <p style={{color:'rgba(184,176,212,0.55)',fontSize:12,marginBottom:14}}>🎯 {trainer.spec}</p>}
+
+        {discounted && (
+          <div style={{fontSize:12,color:'rgba(184,176,212,0.4)',textDecoration:'line-through',marginBottom:8}}>
+            ₹{plan.originalPrice.toLocaleString()} <span style={{color:'#4ade80',textDecoration:'none',marginLeft:6,fontWeight:600}}>Save ₹{plan.originalPrice - plan.price}</span>
+          </div>
+        )}
+
+        {/* Student intake progress */}
+        <div style={{marginBottom:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <span style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>Student Intake</span>
+            <span style={{fontSize:12,fontWeight:700,color:isFull?'#ef4444':enrolled>=max-1?'#f59e0b':'#4ade80'}}>{enrolled} / {max} Students</span>
+          </div>
+          <div style={{height:6,borderRadius:10,background:'rgba(255,255,255,0.06)',overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${pct}%`,borderRadius:10,background:isFull?'linear-gradient(90deg,#ef4444,#dc2626)':enrolled>=max-1?'linear-gradient(90deg,#f59e0b,#d97706)':'linear-gradient(90deg,#7c3aed,#9c59f7)',transition:'width .5s ease'}}/>
+          </div>
+          {isFull && <p style={{fontSize:11,color:'#ef4444',marginTop:4,fontWeight:600}}>⚠️ This trainer is fully booked</p>}
+          {!isFull && max-enrolled <= 2 && <p style={{fontSize:11,color:'#f59e0b',marginTop:4,fontWeight:600}}>⚡ Only {max-enrolled} spot{max-enrolled>1?'s':''} left!</p>}
+        </div>
+
+        {/* Features */}
+        {(plan.features||[]).length > 0 && (
+          <ul style={{listStyle:'none',marginBottom:20,flex:1}}>
+            {plan.features.map(f=>(
+              <li key={f} style={{color:'rgba(240,238,255,0.7)',fontSize:'clamp(11px,1.4vw,13px)',marginBottom:7,display:'flex',gap:8,lineHeight:1.5}}>
+                <span style={{color:'#9c59f7',fontWeight:700,flexShrink:0}}>✓</span>{f}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* CTA button */}
+        {isFull ? (
+          <a href={WHATSAPP} target="_blank" rel="noreferrer"
+            style={{display:'block',width:'100%',padding:'clamp(10px,1.5vw,13px)',border:'none',borderRadius:40,background:'linear-gradient(135deg,#25d366,#128c7e)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:'clamp(12px,1.5vw,14px)',cursor:'pointer',textAlign:'center',textDecoration:'none',boxShadow:'0 4px 20px rgba(37,211,102,0.35)',letterSpacing:.3}}>
+            💬 Full — Enquire on WhatsApp
+          </a>
+        ) : (
+          <button onClick={() => onSelect(plan)}
+            style={{width:'100%',padding:'clamp(10px,1.5vw,13px)',border:'none',borderRadius:40,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:'clamp(12px,1.5vw,14px)',cursor:'pointer',transition:'all .2s',boxShadow:'0 4px 20px rgba(124,58,237,0.4)',letterSpacing:.3}}>
+            Get Started →
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ─── Main Pricing Page ─── */
 export default function Pricing() {
-  const [plans,   setPlans]   = useState([])
-  const [offer,   setOffer]   = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [selected,setSelected]= useState(null)
-  const ptRef = useRef(null)
+  const [plans,    setPlans]   = useState([])
+  const [offer,    setOffer]   = useState(null)
+  const [trainers, setTrainers]= useState([])
+  const [loading,  setLoading] = useState(true)
+  const [selected, setSelected]= useState(null)
+  const ptRef      = useRef(null)
+  const highlightId = new URLSearchParams(window.location.search).get('offer')
 
   const loadPlans = () => {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
@@ -240,6 +344,7 @@ export default function Pricing() {
   useEffect(loadPlans,[])
   useEffect(()=>{
     fetch(`${API}/api/offer`).then(r=>r.json()).then(d=>{ if(d&&d.status==='ON') setOffer(d) }).catch(()=>{})
+    fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
   },[])
 
   // Scroll to PT section if hash present
@@ -249,6 +354,9 @@ export default function Pricing() {
     }
   },[loading])
 
+  // If offer has linked plan, highlight it (from URL ?offer= param or from loaded offer)
+  const linkedPlanId = offer?.linkedPlanId || null
+
   const membershipPlans = plans.filter(p => !p.ptPlan)
   const ptPlans         = plans.filter(p => p.ptPlan)
 
@@ -256,6 +364,7 @@ export default function Pricing() {
     <div className="page-wrapper">
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulseGlow{0%,100%{box-shadow:0 0 18px rgba(124,58,237,0.4)}50%{box-shadow:0 0 40px rgba(124,58,237,0.8)}}
         @media(max-width:480px){
           .plan-grid-inner{ grid-template-columns:1fr !important; max-width:360px !important; }
         }
@@ -304,7 +413,7 @@ export default function Pricing() {
         {!loading && (
           <>
             <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
-              {membershipPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected}/>)}
+              {membershipPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected} isHighlighted={linkedPlanId && plan.id===linkedPlanId}/>)}
               {membershipPlans.length===0 && <p style={{color:'var(--muted)',gridColumn:'1/-1',padding:40}}>No membership plans available.</p>}
             </div>
 
@@ -344,8 +453,11 @@ export default function Pricing() {
         )}
 
         {!loading && ptPlans.length > 0 && (
-          <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
-            {ptPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected}/>)}
+          <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,280px),1fr))',gap:'clamp(14px,2vw,28px)',maxWidth:1100,margin:'0 auto'}}>
+            {ptPlans.map(plan => {
+              const trainer = trainers.find(t => (t.id||t._uid) === plan.trainerId) || null
+              return <PTCard key={plan.id} plan={plan} trainer={trainer} onSelect={setSelected}/>
+            })}
           </div>
         )}
 

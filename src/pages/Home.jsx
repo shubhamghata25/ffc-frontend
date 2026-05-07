@@ -191,14 +191,14 @@ export default function Home() {
                   <div className="badge-purple" style={{marginBottom:12,fontSize:11,letterSpacing:2}}>LIMITED TIME OFFER</div>
                   <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,6vw,60px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                   <p style={{color:'rgba(240,238,255,0.82)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,maxWidth:480}}>{offer.description}</p>
-                  <a href={offer.link} className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn}</a>
+                  <a href={offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn||'View Offer'}</a>
                 </div>
               </div>
             : <div style={{background:'linear-gradient(135deg,#0d0b1a,#1a0a3e)',padding:'clamp(32px,6vw,52px) 8%',textAlign:'center'}}>
                 <div className="badge-purple" style={{marginBottom:12}}>LIMITED TIME OFFER</div>
                 <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,5vw,52px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                 <p style={{color:'rgba(240,238,255,0.8)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6}}>{offer.description}</p>
-                <a href={offer.link} className="btn">{offer.btn}</a>
+                <a href={offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn">{offer.btn||'View Offer'}</a>
               </div>
           }
         </section>
@@ -243,11 +243,11 @@ export default function Home() {
         <div className="accent-line" style={{margin:'0 auto 16px'}}/>
         <h2 className="section-title" style={{marginBottom:10}}>Our Personal <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Trainers</span></h2>
         <p className="section-sub" style={{margin:'0 auto 36px',fontSize:'clamp(13px,2vw,16px)'}}>Certified professionals dedicated to your transformation journey.</p>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,22px)',maxWidth:900,margin:'0 auto 36px'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'clamp(14px,2vw,22px)',maxWidth:520,margin:'0 auto 36px'}}>
           {(trainersList.length>0?trainersList:[
             {name:'Nagendra Singh',role:'Head Trainer',exp:'8+ Years',spec:'Strength & Fat Loss',photo:''},
             {name:'Depankar Bera',role:'Fitness Coach',exp:'5+ Years',spec:'Weight Loss & Nutrition',photo:''},
-          ]).filter(t=>t.status!=='Inactive').map((t,i)=>(
+          ]).filter(t=>t.status!=='Inactive').slice(0,2).map((t,i)=>(
             <div key={t._uid||t.name||i} style={{background:'linear-gradient(145deg,#130f24,#1a1535)',borderRadius:20,border:'1px solid rgba(124,58,237,0.18)',padding:'clamp(20px,3vw,32px) clamp(16px,2vw,24px)',textAlign:'center',transition:'transform .3s,box-shadow .3s,border-color .3s'}}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-8px)';e.currentTarget.style.boxShadow='0 16px 48px rgba(124,58,237,0.25)';e.currentTarget.style.borderColor='rgba(124,58,237,0.4)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='';e.currentTarget.style.borderColor='rgba(124,58,237,0.18)'}}>
@@ -262,8 +262,7 @@ export default function Home() {
           ))}
         </div>
         <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
-          <Link to="/about#trainers" className="btn btn-ghost" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 28px'}}>Meet Our Trainers →</Link>
-          <Link to="/pricing#personal-trainers" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 28px'}}>Get a Trainer Plan →</Link>
+          <Link to="/pricing#personal-trainers" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'12px 32px'}}>View All Trainer Plans →</Link>
         </div>
       </section>
 
