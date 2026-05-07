@@ -1112,7 +1112,7 @@ function Attendance({ apiFetch, reload, toast }) {
 
 function Offers({ apiFetch, token, offers, reload, toast, isMainAdmin=true }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
-  const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:'',hasSpecialPlan:false,planLabel:'',planPrice:0,planOrigPrice:0,planPeriod:'month',planFeatures:'',linkedPlanId:''}
+  const blank={title:'',description:'',btn:'Join Now',link:'/pricing',status:'OFF',poster:'',hasSpecialPlan:false,planLabel:'',planPrice:0,planOrigPrice:0,planPeriod:'month',planFeatures:'',linkedPlanId:'',linkType:'pricing',customLink:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.title)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/offers','POST',form);else await apiFetch(`/api/admin/offers/${modal.id}`,'PUT',form);await reload();toast('Offer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const toggle=async o=>{const u={...o,status:o.status==='ON'?'OFF':'ON'};try{await apiFetch(`/api/admin/offers/${o.id}`,'PUT',u);await reload();toast(u.status==='ON'?'🔴 Offer is LIVE!':'Offer deactivated','ok')}catch{toast('Update failed','err')}}
@@ -1134,7 +1134,7 @@ function Offers({ apiFetch, token, offers, reload, toast, isMainAdmin=true }) {
             <div style={{padding:22}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10,flexWrap:'wrap',gap:8}}>
                 <Badge label={o.status==='ON'?'🔴 LIVE':'⚫ Hidden'} color={o.status==='ON'?'green':'red'}/>
-                <div style={{display:'flex',gap:6}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...o,hasSpecialPlan:!!o.hasSpecialPlan,planLabel:o.planLabel||'',planPrice:o.planPrice||0,planOrigPrice:o.planOrigPrice||0,planPeriod:o.planPeriod||'month',planFeatures:o.planFeatures||'',linkedPlanId:o.linkedPlanId||''});setModal(o)}}>Edit</Btn>{isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn>}</div>
+                <div style={{display:'flex',gap:6}}><Btn size="sm" variant="ghost" onClick={()=>{setForm({...o,hasSpecialPlan:!!o.hasSpecialPlan,planLabel:o.planLabel||'',planPrice:o.planPrice||0,planOrigPrice:o.planOrigPrice||0,planPeriod:o.planPeriod||'month',planFeatures:o.planFeatures||'',linkedPlanId:o.linkedPlanId||'',linkType:o.linkType||'pricing',customLink:o.customLink||''});setModal(o)}}>Edit</Btn>{isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(o.id)}>Del</Btn>}</div>
               </div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:6}}>{o.title}</div>
               <div style={{fontSize:13,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{o.description}</div>
@@ -1151,7 +1151,21 @@ function Offers({ apiFetch, token, offers, reload, toast, isMainAdmin=true }) {
               <FR label="Offer Title *"><input style={inp} value={form.title||''} onChange={e=>set('title',e.target.value)} placeholder="e.g. Summer Sale 🔥"/></FR>
               <FR label="Description"><input style={inp} value={form.description||''} onChange={e=>set('description',e.target.value)}/></FR>
               <FR label="Button Text"><input style={inp} value={form.btn||''} onChange={e=>set('btn',e.target.value)} placeholder="Join Now"/></FR>
-              <FR label="Button Link"><input style={inp} value={form.link||''} onChange={e=>set('link',e.target.value)} placeholder="/pricing"/></FR>
+              <FR label="Where does the button go?">
+                <select style={inp} value={form.linkType||'pricing'} onChange={e=>set('linkType',e.target.value)}>
+                  <option value="pricing">Go to Pricing Page</option>
+                  <option value="plan">Highlight a specific plan</option>
+                  <option value="custom">Custom URL</option>
+                </select>
+              </FR>
+              {(form.linkType==='plan'||!form.linkType) && form.hasSpecialPlan && form.linkedPlanId && (
+                <div style={{fontSize:12,color:'#4ade80',padding:'6px 10px',background:'rgba(34,197,94,0.08)',borderRadius:8,border:'1px solid rgba(34,197,94,0.2)',marginBottom:8}}>
+                  ✅ Will scroll to &amp; highlight the linked plan automatically
+                </div>
+              )}
+              {form.linkType==='custom' && (
+                <FR label="Custom URL"><input style={inp} value={form.customLink||''} onChange={e=>set('customLink',e.target.value)} placeholder="https://... or /page"/></FR>
+              )}
               <FR label="Status"><select style={inp} value={form.status} onChange={e=>set('status',e.target.value)}><option value="OFF">OFF – Hidden</option><option value="ON">ON – Live on homepage</option></select></FR>
             </div>
             <div>
@@ -1258,10 +1272,24 @@ function Leads({ apiFetch, leads, reload, toast, isMainAdmin=true }) {
 
 function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, plans=[] }) {
   const [modal,setModal]=useState(null); const [saving,setSaving]=useState(false)
+  const [ptModal,setPtModal]=useState(null); const [ptSaving,setPtSaving]=useState(false)
   const blank={name:'',role:'',exp:'',spec:'',status:'Active',photo:'',ptEnabled:false,ptPlanId:'',ptPlanLabel:'',bio:''}
   const [form,setForm]=useState(blank); const set=(k,v)=>setForm(f=>({...f,[k]:v}))
+  const ptBlank={label:'',price:'',period:'month',description:'',features:'',maxStudents:5}
+  const [ptForm,setPtForm]=useState(ptBlank); const setPt=(k,v)=>setPtForm(f=>({...f,[k]:v}))
   const save=async()=>{if(!form.name)return;setSaving(true);try{if(modal==='add')await apiFetch('/api/admin/trainers','POST',form);else await apiFetch(`/api/admin/trainers/${modal.id}`,'PUT',form);await reload();toast('Trainer saved!','ok');setModal(null)}catch{toast('Save failed','err')};setSaving(false)}
   const del=async id=>{try{await apiFetch(`/api/admin/trainers/${id}`,'DELETE');await reload();toast('Deleted','ok')}catch{toast('Failed','err')}}
+  const savePtPlan=async()=>{
+    if(!ptForm.label?.trim()){toast('Plan name required','err');return}
+    if(!ptForm.price||isNaN(Number(ptForm.price))){toast('Valid price required','err');return}
+    setPtSaving(true)
+    try{
+      const features = ptForm.features ? ptForm.features.split('\n').map(f=>f.trim()).filter(Boolean) : []
+      await apiFetch(`/api/admin/trainers/${ptModal.id}/pt-plan`,'POST',{...ptForm,features,price:Number(ptForm.price),maxStudents:Number(ptForm.maxStudents)||5})
+      await reload(); toast('PT Plan created & linked!','ok'); setPtModal(null); setPtForm(ptBlank)
+    }catch(e){toast(e?.message||'Failed','err')}
+    setPtSaving(false)
+  }
   const IU = (props) => <ImageUploader token={token} {...props}/>
   return(
     <div>
@@ -1280,18 +1308,49 @@ function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, 
             <div style={{fontSize:13,color:'#6b6490',marginBottom:t.ptEnabled?6:20}}>🎯 {t.spec}</div>
             {t.ptEnabled&&<div style={{fontSize:12,color:'#7c3aed',fontWeight:600,marginBottom:t.bio?4:20,padding:'3px 10px',background:'rgba(124,58,237,0.1)',borderRadius:20,display:'inline-block'}}>🏋 Offers PT Sessions</div>}
             {t.bio&&<div style={{fontSize:12,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{t.bio}</div>}
-            <div style={{display:'flex',gap:8}}>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 {t.ptEnabled&&t.ptPlanId&&(
-                  <a href={`/pricing?pt=1&planId=${t.ptPlanId}&trainer=${encodeURIComponent(t.name)}`} target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                  <a href={`/pricing#personal-trainers`} target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
                     <Btn size="sm" variant="primary">🏋 View PT Plan</Btn>
                   </a>
                 )}
+                {!t.ptPlanId&&<Btn size="sm" variant="ghost" style={{color:'#bb86fc',borderColor:'rgba(124,58,237,0.4)'}} onClick={()=>{setPtForm(ptBlank);setPtModal(t)}}>+ PT Plan</Btn>}
                 <Btn size="sm" variant="ghost" onClick={()=>{setForm({...t,ptEnabled:!!t.ptEnabled,ptPlanId:t.ptPlanId||'',ptPlanLabel:t.ptPlanLabel||'',bio:t.bio||''});setModal(t)}}>Edit</Btn>
                 {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(t.id)}>Delete</Btn>}
               </div>
           </Card>
         ))}
       </div>
+      {/* PT Plan Quick-Create Modal */}
+      {ptModal&&(
+        <Modal title={`Add PT Plan — ${ptModal.name}`} onClose={()=>setPtModal(null)}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,padding:'12px 16px',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:10}}>
+            {ptModal.photo?<img src={ptModal.photo} alt="" style={{width:48,height:48,borderRadius:'50%',objectFit:'cover',border:'2px solid #7c3aed'}}/>:<div style={{width:48,height:48,borderRadius:'50%',background:'rgba(124,58,237,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>🏋</div>}
+            <div>
+              <div style={{fontWeight:700,fontSize:15,color:'#f0eeff'}}>{ptModal.name}</div>
+              <div style={{fontSize:12,color:'#6b6490'}}>{ptModal.role} · {ptModal.spec}</div>
+            </div>
+          </div>
+          <FR label="Plan Name *"><input style={inp} value={ptForm.label} onChange={e=>setPt('label',e.target.value)} placeholder="e.g. PT with Nagendra – 1 Month" autoFocus/></FR>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <FR label="Price (₹) *"><input style={inp} type="number" value={ptForm.price} onChange={e=>setPt('price',e.target.value)} placeholder="3000"/></FR>
+            <FR label="Period"><input style={inp} value={ptForm.period} onChange={e=>setPt('period',e.target.value)} placeholder="month"/></FR>
+          </div>
+          <FR label="Max Students (intake cap)"><input style={inp} type="number" min={1} max={20} value={ptForm.maxStudents} onChange={e=>setPt('maxStudents',e.target.value)}/></FR>
+          <FR label="Description (optional)"><input style={inp} value={ptForm.description} onChange={e=>setPt('description',e.target.value)} placeholder="Brief description…"/></FR>
+          <FR label="Features (one per line)">
+            <textarea style={{...inp,resize:'vertical',height:90}} value={ptForm.features} onChange={e=>setPt('features',e.target.value)} placeholder={"Personalised workout plan\nDiet consultation\n3 sessions/week"}/>
+          </FR>
+          <div style={{padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:'1px solid #2a2347',fontSize:12,color:'#6b6490',marginTop:4}}>
+            💡 This will create a PT plan linked to {ptModal.name} and show it on the Pricing page under "Personal Trainer Plans".
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={savePtPlan} disabled={ptSaving} style={{flex:1,justifyContent:'center'}}>{ptSaving?<Spinner/>:'Create PT Plan'}</Btn>
+            <Btn variant="ghost" onClick={()=>setPtModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+
       {modal&&(
         <Modal title={modal==='add'?'Add Trainer':'Edit Trainer'} onClose={()=>setModal(null)} wide>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20}}>
@@ -1737,11 +1796,15 @@ function StaffSalary({ apiFetch, toast }) {
   const [staff,   setStaff]   = useState([])
   const [loading, setLoading] = useState(true)
   const [alerts,  setAlerts]  = useState([])
-  const [modal,   setModal]   = useState(null)   // null | 'add' | staff-obj
+  const [modal,   setModal]   = useState(null)
+  const [loginModal, setLoginModal] = useState(null)  // staff obj for login setup
   const [saving,  setSaving]  = useState(false)
+  const [loginSaving, setLoginSaving] = useState(false)
   const blank = { name:'', role:'', phone:'', email:'', monthlySalary:'', salaryDate:'1', joinDate:'', endDate:'', status:'Active', note:'' }
   const [form, setForm] = useState(blank)
+  const [loginForm, setLoginForm] = useState({ username:'', password:'' })
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
+  const setL = (k,v) => setLoginForm(f=>({...f,[k]:v}))
 
   const load = async () => {
     setLoading(true)
@@ -1773,20 +1836,45 @@ function StaffSalary({ apiFetch, toast }) {
   }
 
   const del = async (id, name) => {
-    if (!confirm(`Remove staff member "${name}"?`)) return
+    if (!confirm(`Remove staff member "${name}"? This will also remove their login if any.`)) return
     try { await apiFetch(`/api/admin/staff/${id}`,'DELETE'); await load(); toast('Removed','ok') }
     catch { toast('Delete failed','err') }
   }
 
+  const openLoginModal = (s) => {
+    setLoginForm({ username: s.username||'', password:'' })
+    setLoginModal(s)
+  }
+
+  const saveLogin = async (enable) => {
+    if (enable) {
+      if (!loginForm.username.trim()) { toast('Username required','err'); return }
+      if (!loginForm.password.trim()) { toast('Password required','err'); return }
+    }
+    setLoginSaving(true)
+    try {
+      await apiFetch(`/api/admin/staff/${loginModal.id}/login`, 'POST', {
+        enable, username: loginForm.username.trim(), password: loginForm.password.trim()
+      })
+      await load()
+      toast(enable ? `Login created for ${loginModal.name}` : `Login removed for ${loginModal.name}`, 'ok')
+      setLoginModal(null)
+    } catch(e) { toast(e?.message||'Failed','err') }
+    setLoginSaving(false)
+  }
+
   const totalSalary = staff.reduce((s,m) => s + (Number(m.monthlySalary)||Number(m.salary)||0), 0)
   const activeCount = staff.filter(s => s.status === 'Active').length
+  const loginCount  = staff.filter(s => s.hasLogin).length
+
+  const ord = n => { const s=Number(n); return s+(s===1?'st':s===2?'nd':s===3?'rd':'th') }
 
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div>
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>STAFF SALARY</h2>
-          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Manage staff records and track monthly salary schedules</p>
+          <p style={{color:'#6b6490',fontSize:13,marginTop:2}}>Manage staff records, salary schedules and portal access</p>
         </div>
         <Btn onClick={()=>{ setForm(blank); setModal('add') }}>+ Add Staff</Btn>
       </div>
@@ -1802,7 +1890,7 @@ function StaffSalary({ apiFetch, toast }) {
                 <span style={{color:'#f59e0b',fontWeight:700}}>{a.name}</span>
                 <span style={{color:'rgba(240,238,255,0.7)',fontSize:13}}> — ₹{(a.monthlySalary||0).toLocaleString()} due </span>
                 <span style={{color:'#4ade80',fontWeight:700}}>{a.daysUntil===0?'TODAY':`in ${a.daysUntil} day${a.daysUntil>1?'s':''}`}</span>
-                <span style={{color:'rgba(240,238,255,0.5)',fontSize:12}}> (every {a.salaryDate}{a.salaryDate===1?'st':a.salaryDate===2?'nd':a.salaryDate===3?'rd':'th'})</span>
+                <span style={{color:'rgba(240,238,255,0.5)',fontSize:12}}> (every {ord(a.salaryDate)})</span>
               </div>
             </div>
           ))}
@@ -1810,17 +1898,18 @@ function StaffSalary({ apiFetch, toast }) {
       )}
 
       {/* Summary cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:14,marginBottom:24}}>
         {[
           {icon:'👥',label:'Total Staff',value:staff.length,color:'#7c3aed'},
           {icon:'✅',label:'Active',value:activeCount,color:'#22c55e'},
+          {icon:'🔑',label:'Have Login',value:loginCount,color:'#bb86fc'},
           {icon:'💰',label:'Monthly Outflow',value:`₹${(totalSalary/1000).toFixed(1)}k`,color:'#f59e0b'},
-          {icon:'⚠️',label:'Salary Due Soon',value:alerts.length,color:alerts.length>0?'#ef4444':'#6b6490'},
+          {icon:'⚠️',label:'Due Soon',value:alerts.length,color:alerts.length>0?'#ef4444':'#6b6490'},
         ].map(s=>(
-          <Card key={s.label} style={{padding:'18px 20px'}}>
-            <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:s.color}}>{s.value}</div>
-            <div style={{fontSize:11,color:'#6b6490',textTransform:'uppercase',marginTop:2}}>{s.label}</div>
+          <Card key={s.label} style={{padding:'16px 18px'}}>
+            <div style={{fontSize:20,marginBottom:4}}>{s.icon}</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:s.color}}>{s.value}</div>
+            <div style={{fontSize:10,color:'#6b6490',textTransform:'uppercase',marginTop:2}}>{s.label}</div>
           </Card>
         ))}
       </div>
@@ -1829,21 +1918,28 @@ function StaffSalary({ apiFetch, toast }) {
         <>
           {/* Desktop table */}
           <Card className="adm-table-desktop">
-            <Table heads={['Name','Role','Monthly Salary','Salary Date','Join Date','End Date','Status','Actions']} empty={staff.length===0?'No staff added yet':''}>
+            <Table heads={['Name / Role','Salary','Due Date','Joined','Status','Login Access','Actions']} empty={staff.length===0?'No staff added yet':''}>
               {staff.map(s=>(
                 <tr key={s.id} className="adm-row">
                   <Td>
                     <div style={{fontWeight:600}}>{s.name}</div>
-                    {s.phone && <div style={{fontSize:11,color:'#6b6490'}}>{s.phone}</div>}
+                    <div style={{fontSize:11,color:'#6b6490'}}>{s.role||''}{s.phone?` · ${s.phone}`:''}</div>
                   </Td>
-                  <Td style={{fontSize:13,color:'#b8b0d4'}}>{s.role||'—'}</Td>
                   <Td style={{color:'#4ade80',fontWeight:700}}>₹{(Number(s.monthlySalary)||Number(s.salary)||0).toLocaleString()}</Td>
                   <Td style={{fontSize:13}}>
-                    {s.salaryDate ? <span style={{color:'#f59e0b',fontWeight:600}}>{s.salaryDate}{s.salaryDate==1?'st':s.salaryDate==2?'nd':s.salaryDate==3?'rd':'th'} of month</span> : '—'}
+                    {s.salaryDate ? <span style={{color:'#f59e0b',fontWeight:600}}>{ord(s.salaryDate)} of month</span> : '—'}
                   </Td>
                   <Td style={{fontSize:12,color:'#6b6490'}}>{s.joinDate||'—'}</Td>
-                  <Td style={{fontSize:12,color:'#6b6490'}}>{s.endDate||'—'}</Td>
                   <Td><Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/></Td>
+                  <Td>
+                    {s.hasLogin
+                      ? <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <Badge label="🔑 Has Login" color="purple"/>
+                          <button onClick={()=>openLoginModal(s)} style={{background:'none',border:'1px solid rgba(124,58,237,0.3)',color:'#7c3aed',borderRadius:6,padding:'2px 8px',fontSize:11,cursor:'pointer',fontFamily:"'Poppins',sans-serif"}}>Manage</button>
+                        </div>
+                      : <button onClick={()=>openLoginModal(s)} style={{background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.25)',color:'#bb86fc',borderRadius:6,padding:'4px 10px',fontSize:11,cursor:'pointer',fontFamily:"'Poppins',sans-serif",fontWeight:600}}>+ Give Access</button>
+                    }
+                  </Td>
                   <Td><div style={{display:'flex',gap:6}}>
                     <Btn size="sm" variant="ghost" onClick={()=>{ setForm({...s, monthlySalary:String(s.monthlySalary||s.salary||''), salaryDate:String(s.salaryDate||1) }); setModal(s) }}>Edit</Btn>
                     <Btn size="sm" variant="danger" onClick={()=>del(s.id,s.name)}>Del</Btn>
@@ -1863,16 +1959,19 @@ function StaffSalary({ apiFetch, toast }) {
                     <p style={{fontWeight:700,fontSize:15,marginBottom:2}}>{s.name}</p>
                     <p style={{fontSize:12,color:'#6b6490'}}>{s.role||''}</p>
                   </div>
-                  <Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/>
+                  <div style={{display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end'}}>
+                    <Badge label={s.status||'Active'} color={s.status==='Active'?'green':'red'}/>
+                    {s.hasLogin && <Badge label="🔑 Login" color="purple"/>}
+                  </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12,fontSize:12}}>
                   <div><span style={{color:'#6b6490'}}>Salary: </span><span style={{color:'#4ade80',fontWeight:700}}>₹{(Number(s.monthlySalary)||Number(s.salary)||0).toLocaleString()}</span></div>
-                  <div><span style={{color:'#6b6490'}}>Due: </span><span style={{color:'#f59e0b',fontWeight:600}}>{s.salaryDate ? `${s.salaryDate}${s.salaryDate==1?'st':s.salaryDate==2?'nd':s.salaryDate==3?'rd':'th'}` : '—'}</span></div>
+                  <div><span style={{color:'#6b6490'}}>Due: </span><span style={{color:'#f59e0b',fontWeight:600}}>{s.salaryDate ? ord(s.salaryDate) : '—'}</span></div>
                   <div><span style={{color:'#6b6490'}}>Joined: </span>{s.joinDate||'—'}</div>
-                  <div><span style={{color:'#6b6490'}}>End: </span>{s.endDate||'—'}</div>
                 </div>
-                <div style={{display:'flex',gap:8}}>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                   <Btn size="sm" variant="ghost" onClick={()=>{ setForm({...s, monthlySalary:String(s.monthlySalary||s.salary||''), salaryDate:String(s.salaryDate||1) }); setModal(s) }} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+                  <Btn size="sm" variant={s.hasLogin?'muted':'primary'} onClick={()=>openLoginModal(s)} style={{flex:1,justifyContent:'center'}}>{s.hasLogin?'🔑 Manage Login':'+ Give Access'}</Btn>
                   <Btn size="sm" variant="danger" onClick={()=>del(s.id,s.name)} style={{flex:1,justifyContent:'center'}}>Remove</Btn>
                 </div>
               </Card>
@@ -1881,40 +1980,63 @@ function StaffSalary({ apiFetch, toast }) {
         </>
       )}
 
-      {/* Add / Edit Modal */}
+      {/* Add / Edit Staff Modal */}
       {modal && (
         <Modal title={modal==='add'?'Add Staff Member':'Edit Staff Member'} onClose={()=>setModal(null)}>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,200px),1fr))',gap:14}}>
             <div>
               <FR label="Full Name *"><input style={inp} value={form.name||''} onChange={e=>set('name',e.target.value)} placeholder="e.g. Rajesh Kumar" autoFocus/></FR>
-              <FR label="Role / Position"><input style={inp} value={form.role||''} onChange={e=>set('role',e.target.value)} placeholder="e.g. Receptionist"/></FR>
-              <FR label="Phone"><input style={inp} value={form.phone||''} onChange={e=>set('phone',e.target.value)} placeholder="10-digit number"/></FR>
-              <FR label="Email"><input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} placeholder="email@example.com"/></FR>
+              <FR label="Role / Position"><input style={inp} value={form.role||''} onChange={e=>set('role',e.target.value)} placeholder="e.g. Sweeper, Receptionist"/></FR>
+              <FR label="Phone"><input style={inp} value={form.phone||''} onChange={e=>set('phone',e.target.value)}/></FR>
+              <FR label="Email"><input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)}/></FR>
             </div>
             <div>
               <FR label="Monthly Salary (₹) *"><input style={inp} type="number" value={form.monthlySalary||''} onChange={e=>set('monthlySalary',e.target.value)} placeholder="15000"/></FR>
-              <FR label="Salary Date (day of month, 1–28) *">
-                <input style={inp} type="number" min={1} max={28} value={form.salaryDate||1} onChange={e=>set('salaryDate',e.target.value)} placeholder="5"/>
-              </FR>
+              <FR label="Salary Date (1–28) *"><input style={inp} type="number" min={1} max={28} value={form.salaryDate||1} onChange={e=>set('salaryDate',e.target.value)}/></FR>
               <FR label="Join Date"><input style={inp} type="date" value={form.joinDate||''} onChange={e=>set('joinDate',e.target.value)}/></FR>
-              <FR label="End Date (if left gym)"><input style={inp} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/></FR>
+              <FR label="End Date (if left)"><input style={inp} type="date" value={form.endDate||''} onChange={e=>set('endDate',e.target.value)}/></FR>
               <FR label="Status">
                 <select style={inp} value={form.status||'Active'} onChange={e=>set('status',e.target.value)}>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive / Left</option>
                 </select>
               </FR>
-              <FR label="Note (optional)">
-                <textarea style={{...inp,resize:'none',height:60}} value={form.note||''} onChange={e=>set('note',e.target.value)} placeholder="Any notes…"/>
-              </FR>
+              <FR label="Note"><textarea style={{...inp,resize:'none',height:52}} value={form.note||''} onChange={e=>set('note',e.target.value)}/></FR>
             </div>
           </div>
-          <div style={{marginTop:8,padding:'10px 14px',borderRadius:8,background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.15)',fontSize:12,color:'#6b6490'}}>
-            💡 Admin will receive an alert 3 days before the salary date each month.
+          <div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',fontSize:12,color:'#6b6490'}}>
+            💡 Login access can be given separately per staff — sweepers, helpers etc. can be stored here without a login.
           </div>
           <div style={{display:'flex',gap:10,marginTop:12}}>
             <Btn onClick={save} disabled={saving} style={{flex:1,justifyContent:'center'}}>{saving?<Spinner/>:modal==='add'?'Add Staff':'Save Changes'}</Btn>
             <Btn variant="ghost" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Login Access Modal */}
+      {loginModal && (
+        <Modal title={`Portal Access — ${loginModal.name}`} onClose={()=>setLoginModal(null)}>
+          <div style={{marginBottom:16,padding:'12px 16px',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:10,fontSize:13,color:'#b8b0d4',lineHeight:1.7}}>
+            {loginModal.hasLogin
+              ? <><span style={{color:'#4ade80',fontWeight:700}}>✅ Has portal login.</span> Update credentials or remove access below.</>
+              : <><span style={{color:'#f59e0b',fontWeight:700}}>🚫 No login yet.</span> Set username &amp; password to give this staff member access to the admin portal.</>
+            }
+          </div>
+          <FR label="Username *">
+            <input style={inp} value={loginForm.username} onChange={e=>setL('username',e.target.value)} placeholder="Min 3 characters" autoFocus autoComplete="off"/>
+          </FR>
+          <FR label={loginModal.hasLogin ? 'New Password (leave blank to keep current)' : 'Password *'}>
+            <input style={inp} type="password" value={loginForm.password} onChange={e=>setL('password',e.target.value)} placeholder={loginModal.hasLogin?'Leave blank to keep current':'Min 6 characters'} autoComplete="new-password"/>
+          </FR>
+          <div style={{padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:'1px solid #2a2347',fontSize:12,color:'#6b6490',lineHeight:1.7,marginTop:4}}>
+            🔓 Access: Members, Attendance, Offers, Leads, Trainers, Store, Pricing, Exercises<br/>
+            🚫 Restricted: Revenue, Expenses, Sub-Admin Management (main admin only)
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:14}}>
+            <Btn onClick={()=>saveLogin(true)} disabled={loginSaving} style={{flex:1,justifyContent:'center'}}>{loginSaving?<Spinner/>:loginModal.hasLogin?'Update Login':'Give Access'}</Btn>
+            {loginModal.hasLogin && <Btn variant="danger" onClick={()=>saveLogin(false)} disabled={loginSaving} style={{flex:1,justifyContent:'center'}}>Remove Access</Btn>}
+            <Btn variant="ghost" onClick={()=>setLoginModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
           </div>
         </Modal>
       )}
@@ -1924,7 +2046,7 @@ function StaffSalary({ apiFetch, toast }) {
 
 
 /* ══════════════════════════════════════════════════════
-   REVENUE SECTION — main admin only
+   REVENUE SECTION — main admin onlyN — main admin only
    ══════════════════════════════════════════════════════ */
 function Revenue({ apiFetch, members, toast }) {
   const [summary, setSummary] = useState(null)

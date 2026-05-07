@@ -167,7 +167,7 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
                 <Btn size="sm" variant={plan.popular?'muted':'ghost'} onClick={()=>togglePopular(plan)}>
                   {plan.popular?'Unpin':'⭐ Popular'}
                 </Btn>
-                {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>del(plan.id)}>Del</Btn>}
+{isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>del(plan.id)}>Del</Btn>}
               </div>
             </Card>
           )
@@ -226,7 +226,7 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
                 </FR>
               </div>
 
-              {/* PT Plan toggle */}
+              {/* PT Plan section */}
               <div style={{background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px',marginTop:8}}>
                 <FR label="Plan Type">
                   <select style={inp} value={form.ptPlan?'pt':'membership'} onChange={e=>set('ptPlan',e.target.value==='pt')}>

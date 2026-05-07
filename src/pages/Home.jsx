@@ -191,14 +191,14 @@ export default function Home() {
                   <div className="badge-purple" style={{marginBottom:12,fontSize:11,letterSpacing:2}}>LIMITED TIME OFFER</div>
                   <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,6vw,60px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                   <p style={{color:'rgba(240,238,255,0.82)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,maxWidth:480}}>{offer.description}</p>
-                  <a href={offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn||'View Offer'}</a>
+                  <a href={offer.linkType==='custom'&&offer.customLink ? offer.customLink : offer.linkType==='plan'&&offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn||'View Offer'}</a>
                 </div>
               </div>
             : <div style={{background:'linear-gradient(135deg,#0d0b1a,#1a0a3e)',padding:'clamp(32px,6vw,52px) 8%',textAlign:'center'}}>
                 <div className="badge-purple" style={{marginBottom:12}}>LIMITED TIME OFFER</div>
                 <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,5vw,52px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                 <p style={{color:'rgba(240,238,255,0.8)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6}}>{offer.description}</p>
-                <a href={offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn">{offer.btn||'View Offer'}</a>
+                <a href={offer.linkType==='custom'&&offer.customLink ? offer.customLink : offer.linkType==='plan'&&offer.linkedPlanId ? `/pricing?offer=${offer._uid||offer.id}` : '/pricing'} className="btn">{offer.btn||'View Offer'}</a>
               </div>
           }
         </section>

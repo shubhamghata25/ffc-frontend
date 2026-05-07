@@ -234,7 +234,7 @@ function PlanCard({ plan, onSelect, isHighlighted=false }) {
 }
 
 /* ─── PT Plan Card — premium trainer card with cap ─── */
-function PTCard({ plan, trainer, onSelect }) {
+function PTCard({ plan, trainer, onSelect, isHighlighted=false }) {
   const max      = plan.maxStudents || 5
   const enrolled = plan.enrolledCount || 0
   const isFull   = enrolled >= max
@@ -246,7 +246,7 @@ function PTCard({ plan, trainer, onSelect }) {
     <div style={{
       background:'linear-gradient(145deg,#130f24,#1a1535)',
       borderRadius:'clamp(16px,2vw,24px)',
-      border: isFull ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(124,58,237,0.2)',
+      border: isHighlighted ? '2px solid #7c3aed' : isFull ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(124,58,237,0.2)',
       overflow:'hidden', display:'flex', flexDirection:'column',
       transition:'transform .3s,box-shadow .3s',
     }}
@@ -347,12 +347,22 @@ export default function Pricing() {
     fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
   },[])
 
-  // Scroll to PT section if hash present
+  // Highlighted plan ref for auto-scroll
+  const highlightRef = useRef(null)
+
+  // Scroll to PT section if hash present, or to highlighted plan if offer param
   useEffect(()=>{
-    if(!loading && window.location.hash==='#personal-trainers' && ptRef.current){
+    if(loading) return
+    if(window.location.hash==='#personal-trainers' && ptRef.current){
       setTimeout(()=>ptRef.current.scrollIntoView({behavior:'smooth',block:'start'}),200)
     }
   },[loading])
+
+  useEffect(()=>{
+    if(!loading && linkedPlanId && highlightRef.current){
+      setTimeout(()=>highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'}),400)
+    }
+  },[loading, linkedPlanId])
 
   // If offer has linked plan, highlight it (from URL ?offer= param or from loaded offer)
   const linkedPlanId = offer?.linkedPlanId || null
@@ -413,7 +423,10 @@ export default function Pricing() {
         {!loading && (
           <>
             <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
-              {membershipPlans.map(plan => <PlanCard key={plan.id} plan={plan} onSelect={setSelected} isHighlighted={linkedPlanId && plan.id===linkedPlanId}/>)}
+              {membershipPlans.map(plan => {
+              const hl = !!(linkedPlanId && plan.id===linkedPlanId)
+              return <div key={plan.id} ref={hl?highlightRef:null}><PlanCard plan={plan} onSelect={setSelected} isHighlighted={hl}/></div>
+            })}
               {membershipPlans.length===0 && <p style={{color:'var(--muted)',gridColumn:'1/-1',padding:40}}>No membership plans available.</p>}
             </div>
 
@@ -456,7 +469,8 @@ export default function Pricing() {
           <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,280px),1fr))',gap:'clamp(14px,2vw,28px)',maxWidth:1100,margin:'0 auto'}}>
             {ptPlans.map(plan => {
               const trainer = trainers.find(t => (t.id||t._uid) === plan.trainerId) || null
-              return <PTCard key={plan.id} plan={plan} trainer={trainer} onSelect={setSelected}/>
+              const hl = !!(linkedPlanId && plan.id===linkedPlanId)
+              return <div key={plan.id} ref={hl?highlightRef:null} style={{animation:hl?'pulseGlow 2s ease-in-out infinite':'none',borderRadius:'clamp(16px,2vw,24px)'}}><PTCard plan={plan} trainer={trainer} onSelect={setSelected} isHighlighted={hl}/></div>
             })}
           </div>
         )}
