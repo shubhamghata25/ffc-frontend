@@ -138,7 +138,29 @@ export default function KioskPage() {
       showResult({code:'INVALID',message:'Not a valid FFC QR code. Please collect your QR card from reception.'})
       return
     }
-    if(!payload.id || payload.gym!=='FFC') {
+    if(payload.gym!=='FFC') {
+      showResult({code:'INVALID',message:'This QR does not belong to FFC. Please contact reception.'})
+      return
+    }
+
+    // Staff QR: { staffId, gym:'FFC' }
+    if(payload.staffId) {
+      try {
+        const res=await fetch(`${API}/api/kiosk/staff-scan`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-kiosk-token':KIOSK_TOKEN},
+          body:JSON.stringify({staffId:payload.staffId}),
+        })
+        const data=await res.json()
+        showResult(data)
+      } catch {
+        showResult({code:'ERROR',message:'Cannot reach server. Please check internet connection.'})
+      }
+      return
+    }
+
+    // Member QR: { id, gym:'FFC' }
+    if(!payload.id) {
       showResult({code:'INVALID',message:'This QR does not belong to FFC. Please contact reception.'})
       return
     }

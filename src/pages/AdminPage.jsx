@@ -277,6 +277,57 @@ function QRCodeDisplay({ member }) {
   )
 }
 
+/* ── STAFF QR CODE DISPLAY ── */
+function StaffQRDisplay({ staff }) {
+  const canvasRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  const [err,   setErr]   = useState(false)
+  const payload = JSON.stringify({ staffId: staff.id, gym: 'FFC' })
+
+  useEffect(() => {
+    import('qrcode').then(QRCode => {
+      if (canvasRef.current) {
+        QRCode.toCanvas(canvasRef.current, payload, {
+          width: 220, margin: 2,
+          color: { dark: '#ffffff', light: '#0a0818' },
+        }, e => { if (!e) setReady(true) })
+      }
+    }).catch(() => setErr(true))
+  }, [payload])
+
+  const download = () => {
+    if (!canvasRef.current) return
+    const a = document.createElement('a')
+    a.href = canvasRef.current.toDataURL('image/png')
+    a.download = `Staff_QR_${staff.name?.replace(/\s+/g,'_') || 'unknown'}.png`
+    a.click()
+  }
+
+  return (
+    <div style={{textAlign:'center',padding:'8px 0'}}>
+      <div style={{background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:16,fontSize:12,color:'#bb86fc',lineHeight:1.7}}>
+        <strong>Scan Windows (IST)</strong><br/>
+        ☀️ Morning: <strong>5:00 AM – 12:00 PM</strong><br/>
+        🌙 Evening: <strong>4:00 PM – 10:00 PM</strong>
+      </div>
+      {err
+        ? <p style={{color:'#f59e0b',fontSize:13}}>⚠ QR generation failed.</p>
+        : <>
+            <canvas ref={canvasRef} style={{borderRadius:12,display:'block',margin:'0 auto',border:'3px solid #7c3aed',boxShadow:'0 0 24px rgba(124,58,237,0.4)'}}/>
+            {ready && <>
+              <p style={{fontSize:12,color:'#6b6490',margin:'10px 0 6px'}}>
+                Staff: <strong style={{color:'#bb86fc'}}>{staff.name}</strong><br/>
+                Scan at kiosk once per time window
+              </p>
+              <Btn size="sm" onClick={download}>⬇ Download PNG</Btn>
+            </>}
+            {!ready && !err && <p style={{color:'#6b6490',fontSize:13,marginTop:10}}>Generating QR…</p>}
+          </>
+      }
+    </div>
+  )
+}
+
 /* ── QR SCANNER ── */
 function QRScanner({ apiFetch, onSuccess }) {
   const videoRef  = useRef(null)
@@ -1036,7 +1087,9 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
 
 function Attendance({ apiFetch, reload, toast }) {
   const [todayLog,setTodayLog] = useState([])
+  const [staffLog,setStaffLog] = useState([])
   const [loadingLog,setLoadingLog] = useState(true)
+  const [loadingStaff,setLoadingStaff] = useState(true)
   const [tab,setTab] = useState('scan')
 
   const loadLog = async () => {
@@ -1045,19 +1098,37 @@ function Attendance({ apiFetch, reload, toast }) {
     catch{}
     setLoadingLog(false)
   }
-  useEffect(()=>{ loadLog() },[])
+  const loadStaffLog = async () => {
+    setLoadingStaff(true)
+    try {
+      const todayIST = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Kolkata' })
+      const d = await apiFetch(`/api/admin/staff-attendance?date=${todayIST}`)
+      setStaffLog(Array.isArray(d) ? d : [])
+    } catch{}
+    setLoadingStaff(false)
+  }
+  useEffect(()=>{ loadLog(); loadStaffLog() },[])
 
   const TabBtn = ({id,label}) => (
     <button onClick={()=>setTab(id)} style={{flex:1,padding:'10px 0',background:tab===id?'#7c3aed':'transparent',border:'none',borderRadius:10,color:tab===id?'#fff':'#6b6490',fontWeight:600,fontSize:14,cursor:'pointer',fontFamily:"'Poppins',sans-serif",transition:'all .2s',minHeight:44}}>
       {label}
     </button>
   )
+
+  // Group staff log by staffName for display
+  const staffToday = staffLog.reduce((acc, r) => {
+    if (!acc[r.staffName]) acc[r.staffName] = {}
+    acc[r.staffName][r.slot] = r.time
+    return acc
+  }, {})
+
   return(
     <div>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2,marginBottom:20}}>ATTENDANCE</h2>
       <div style={{display:'flex',gap:6,background:'#0d0b1a',padding:6,borderRadius:14,marginBottom:24,border:'1px solid #2a2347'}}>
         <TabBtn id="scan" label="📷 Scan QR"/>
-        <TabBtn id="log"  label={`📋 Today's Log (${todayLog.length})`}/>
+        <TabBtn id="log"  label={`📋 Members (${todayLog.length})`}/>
+        <TabBtn id="staff" label={`👤 Staff (${staffLog.length})`}/>
       </div>
       {tab==='scan'&&(
         <div>
@@ -1099,6 +1170,52 @@ function Attendance({ apiFetch, reload, toast }) {
                   <div key={a.id} style={{padding:'12px 18px',borderBottom:'1px solid #2a2347',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
                     <div><p style={{fontWeight:600,fontSize:14,marginBottom:2}}>{a.memberName}</p><p style={{fontSize:12,color:'#6b6490'}}>{a.plan?.split('–')[0].trim()}</p></div>
                     <span style={{color:'#22c55e',fontSize:13,flexShrink:0}}>✅ {a.time}</span>
+                  </div>
+                ))}
+              </div>
+           </>
+          }
+        </Card>
+      )}
+      {tab==='staff'&&(
+        <Card>
+          <div style={{padding:'14px 18px',borderBottom:'1px solid #2a2347',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+            <span style={{fontWeight:600,fontSize:14}}>Staff Today — {new Date().toDateString()}</span>
+            <button onClick={loadStaffLog} style={{background:'none',border:'1px solid #2a2347',color:'#6b6490',cursor:'pointer',borderRadius:8,padding:'5px 12px',fontSize:12,minHeight:36}}>↻ Refresh</button>
+          </div>
+          <div style={{padding:'10px 18px',background:'rgba(124,58,237,0.06)',borderBottom:'1px solid #2a2347',fontSize:12,color:'#9d8ec7',lineHeight:1.6}}>
+            ☀️ Morning: 5:00 AM–12:00 PM &nbsp;|&nbsp; 🌙 Evening: 4:00 PM–10:00 PM
+          </div>
+          {loadingStaff?<div style={{textAlign:'center',padding:40}}><Spinner size={28}/></div>
+           :staffLog.length===0?<p style={{textAlign:'center',color:'#6b6490',padding:40}}>No staff check-ins today yet.</p>
+           :<>
+              <div className="adm-table-desktop">
+                <Table heads={['Staff Name','Morning','Evening','Total Scans']}>
+                  {Object.entries(staffToday).map(([name, slots])=>(
+                    <tr key={name} className="adm-row">
+                      <Td style={{fontWeight:600}}>{name}</Td>
+                      <Td style={{color: slots.morning ? '#22c55e' : '#6b6490', fontSize:13}}>
+                        {slots.morning ? `☀️ ${slots.morning}` : '—'}
+                      </Td>
+                      <Td style={{color: slots.evening ? '#bb86fc' : '#6b6490', fontSize:13}}>
+                        {slots.evening ? `🌙 ${slots.evening}` : '—'}
+                      </Td>
+                      <Td style={{fontWeight:700, color:'#f59e0b'}}>
+                        {(slots.morning?1:0)+(slots.evening?1:0)} / 2
+                      </Td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+              <div className="member-card">
+                {Object.entries(staffToday).map(([name, slots])=>(
+                  <div key={name} style={{padding:'12px 18px',borderBottom:'1px solid #2a2347'}}>
+                    <p style={{fontWeight:600,fontSize:14,marginBottom:6}}>{name}</p>
+                    <div style={{display:'flex',gap:12,fontSize:13}}>
+                      <span style={{color:slots.morning?'#22c55e':'#6b6490'}}>{slots.morning ? `☀️ ${slots.morning}` : '☀️ —'}</span>
+                      <span style={{color:slots.evening?'#bb86fc':'#6b6490'}}>{slots.evening ? `🌙 ${slots.evening}` : '🌙 —'}</span>
+                      <span style={{color:'#f59e0b',fontWeight:700,marginLeft:'auto'}}>{(slots.morning?1:0)+(slots.evening?1:0)}/2</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1798,6 +1915,7 @@ function StaffSalary({ apiFetch, toast }) {
   const [alerts,  setAlerts]  = useState([])
   const [modal,   setModal]   = useState(null)
   const [loginModal, setLoginModal] = useState(null)  // staff obj for login setup
+  const [staffQRModal, setStaffQRModal] = useState(null) // staff obj for QR display
   const [saving,  setSaving]  = useState(false)
   const [loginSaving, setLoginSaving] = useState(false)
   const blank = { name:'', role:'', phone:'', email:'', monthlySalary:'', salaryDate:'1', joinDate:'', endDate:'', status:'Active', note:'' }
@@ -1942,6 +2060,7 @@ function StaffSalary({ apiFetch, toast }) {
                   </Td>
                   <Td><div style={{display:'flex',gap:6}}>
                     <Btn size="sm" variant="ghost" onClick={()=>{ setForm({...s, monthlySalary:String(s.monthlySalary||s.salary||''), salaryDate:String(s.salaryDate||1) }); setModal(s) }}>Edit</Btn>
+                    <Btn size="sm" variant="primary" onClick={()=>setStaffQRModal(s)}>📱 QR</Btn>
                     <Btn size="sm" variant="danger" onClick={()=>del(s.id,s.name)}>Del</Btn>
                   </div></Td>
                 </tr>
@@ -1972,6 +2091,7 @@ function StaffSalary({ apiFetch, toast }) {
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                   <Btn size="sm" variant="ghost" onClick={()=>{ setForm({...s, monthlySalary:String(s.monthlySalary||s.salary||''), salaryDate:String(s.salaryDate||1) }); setModal(s) }} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
                   <Btn size="sm" variant={s.hasLogin?'muted':'primary'} onClick={()=>openLoginModal(s)} style={{flex:1,justifyContent:'center'}}>{s.hasLogin?'🔑 Manage Login':'+ Give Access'}</Btn>
+                  <Btn size="sm" variant="primary" onClick={()=>setStaffQRModal(s)} style={{flex:1,justifyContent:'center'}}>📱 QR Code</Btn>
                   <Btn size="sm" variant="danger" onClick={()=>del(s.id,s.name)} style={{flex:1,justifyContent:'center'}}>Remove</Btn>
                 </div>
               </Card>
@@ -2038,6 +2158,13 @@ function StaffSalary({ apiFetch, toast }) {
             {loginModal.hasLogin && <Btn variant="danger" onClick={()=>saveLogin(false)} disabled={loginSaving} style={{flex:1,justifyContent:'center'}}>Remove Access</Btn>}
             <Btn variant="ghost" onClick={()=>setLoginModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
           </div>
+        </Modal>
+      )}
+
+      {/* Staff QR Code Modal */}
+      {staffQRModal && (
+        <Modal title={`📱 Staff QR — ${staffQRModal.name}`} onClose={()=>setStaffQRModal(null)}>
+          <StaffQRDisplay staff={staffQRModal}/>
         </Modal>
       )}
     </div>

@@ -257,7 +257,8 @@ export default function Home() {
               }
               <h4 style={{color:'#bb86fc',fontSize:'clamp(15px,2vw,18px)',marginBottom:4,fontWeight:700}}>{t.name}</h4>
               <p style={{color:'rgba(184,176,212,0.6)',fontSize:12,marginBottom:4}}>{t.role} · {t.exp}</p>
-              <p style={{color:'rgba(184,176,212,0.45)',fontSize:12,marginBottom:20}}>{t.spec}</p>
+              <p style={{color:'rgba(184,176,212,0.45)',fontSize:12,marginBottom:16}}>{t.spec}</p>
+              <Link to="/pricing#personal-trainers" className="btn btn-ghost" style={{fontSize:12,padding:'8px 18px',display:'block',textAlign:'center'}}>View PT Plan →</Link>
             </div>
           ))}
         </div>
