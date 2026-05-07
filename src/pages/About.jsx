@@ -110,12 +110,12 @@ export default function About() {
               <h4 style={{ color:'#bb86fc', fontSize:18, marginBottom:5, fontWeight:700 }}>{t.name}</h4>
               <p style={{ color:'var(--textSub)', fontSize:13, marginBottom:4 }}>{t.role} · {t.exp}</p>
               <p style={{ color:'var(--muted)', fontSize:13, marginBottom:24 }}>{t.spec}</p>
-              <Link to="/pricing#personal-trainers" className="btn" style={{ fontSize:13, padding:'10px 24px', display:'block', textAlign:'center' }}>View PT Plan →</Link>
+              <Link to={`/pricing?trainerId=${t.id||t._uid||''}`} className="btn" style={{ fontSize:13, padding:'10px 24px', display:'block', textAlign:'center' }}>View PT Plan →</Link>
             </div>
           ))}
         </div>
 
-        <Link to="/pricing" className="btn" style={{ fontSize:16, padding:'14px 42px' }}>Join Now →</Link>
+        <Link to="/pricing#personal-trainers" className="btn" style={{ fontSize:16, padding:'14px 42px' }}>Join Now →</Link>
       </section>
     </div>
   )

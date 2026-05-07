@@ -118,7 +118,7 @@ function PayModal({ plan, onClose, onDone }) {
                 <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
                 <div>
                   <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Card / Net Banking / UPI</div>
-                  <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — GPay, PhonePe, Paytm, all cards</div>
+                  <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — GPay, PhonePe, all cards</div>
                 </div>
                 <div style={{ marginLeft:'auto',color:'#9c59f7',fontSize:18 }}>›</div>
               </button>
@@ -130,17 +130,6 @@ function PayModal({ plan, onClose, onDone }) {
                   <div style={{ fontSize:11,color:'#818cf8' }}>{isMobile ? 'Opens UPI app directly' : 'Best on mobile'}</div>
                 </div>
                 <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
-              </button>
-
-              <button onClick={()=>{ const m=`Hello! I want to join FFC ${plan.label} plan for Rs.${plan.price}. Name: ${form.name}, Phone: ${form.phone}`; window.open(`https://wa.me/918484805154?text=${encodeURIComponent(m)}`,'_blank'); onClose() }}
-                disabled={paying}
-                style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(37,211,102,0.08)',border:'2px solid rgba(37,211,102,0.2)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
-                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💬</div>
-                <div>
-                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>WhatsApp Enquiry</div>
-                  <div style={{ fontSize:11,color:'#4ade80' }}>Chat with us to confirm and pay manually</div>
-                </div>
-                <div style={{ marginLeft:'auto',color:'#4ade80',fontSize:18 }}>›</div>
               </button>
 
               <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
@@ -336,7 +325,12 @@ export default function Pricing() {
   const [loading,  setLoading] = useState(true)
   const [selected, setSelected]= useState(null)
   const ptRef      = useRef(null)
-  const highlightId = new URLSearchParams(window.location.search).get('offer')
+  const highlightRef = useRef(null)
+
+  // Read URL params: ?offer=xxx highlights by plan ID, ?trainerId=xxx highlights by trainer ID
+  const searchParams  = new URLSearchParams(window.location.search)
+  const highlightId   = searchParams.get('offer')
+  const trainerIdParam = searchParams.get('trainerId')  // from "View PT Plan" buttons
 
   const loadPlans = () => {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
@@ -347,25 +341,24 @@ export default function Pricing() {
     fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
   },[])
 
-  // If offer has linked plan, highlight it
+  // If offer has linked plan, highlight it. trainerId param also highlights that trainer's plan.
   const linkedPlanId = offer?.linkedPlanId || null
 
-  // Highlighted plan ref for auto-scroll
-  const highlightRef = useRef(null)
-
-  // Scroll to PT section if hash present
+  // Scroll to PT section when: hash present, or trainerId param present, or offer links a PT plan
   useEffect(()=>{
     if(loading) return
-    if(window.location.hash==='#personal-trainers' && ptRef.current){
+    const shouldScrollPT = window.location.hash==='#personal-trainers' || !!trainerIdParam
+    if(shouldScrollPT && ptRef.current){
       setTimeout(()=>ptRef.current.scrollIntoView({behavior:'smooth',block:'start'}),200)
     }
   },[loading])
 
+  // Scroll to highlighted plan card (offer-linked or trainer-linked)
   useEffect(()=>{
-    if(!loading && linkedPlanId && highlightRef.current){
-      setTimeout(()=>highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'}),400)
+    if(!loading && highlightRef.current){
+      setTimeout(()=>highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'}),450)
     }
-  },[loading, linkedPlanId])
+  },[loading])
 
   const membershipPlans = plans.filter(p => !p.ptPlan)
   const ptPlans         = plans.filter(p => p.ptPlan)
@@ -379,29 +372,6 @@ export default function Pricing() {
           .plan-grid-inner{ grid-template-columns:1fr !important; max-width:360px !important; }
         }
       `}</style>
-
-      {/* ─── OFFER BANNER ─── */}
-      {offer && (
-        <section style={{borderBottom:'1px solid rgba(124,58,237,0.2)',position:'relative',overflow:'hidden'}}>
-          {offer.poster
-            ? <div style={{position:'relative'}}>
-                <img src={offer.poster} alt={offer.title} style={{width:'100%',height:'clamp(180px,40vw,380px)',objectFit:'cover',objectPosition:'center',display:'block'}}/>
-                <div style={{position:'absolute',inset:0,background:'rgba(6,5,15,0.62)'}}/>
-                <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px 6%',textAlign:'center'}}>
-                  <div className="badge-purple" style={{marginBottom:10,fontSize:11,letterSpacing:2}}>🔥 LIMITED TIME OFFER</div>
-                  <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(22px,5vw,52px)',letterSpacing:2,marginBottom:8}}>{offer.title}</h2>
-                  <p style={{color:'rgba(240,238,255,0.82)',marginBottom:18,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,maxWidth:480}}>{offer.description}</p>
-                </div>
-              </div>
-            : <div style={{background:'linear-gradient(135deg,#1a0a3e,#0d0b1a)',padding:'clamp(24px,4vw,40px) 8%',textAlign:'center',position:'relative',overflow:'hidden'}}>
-                <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 50%,rgba(124,58,237,0.18) 0%,transparent 65%)',pointerEvents:'none'}}/>
-                <div className="badge-purple" style={{marginBottom:10,position:'relative'}}>🔥 LIMITED TIME OFFER</div>
-                <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,5vw,52px)',letterSpacing:2,marginBottom:8,position:'relative'}}>{offer.title}</h2>
-                <p style={{color:'rgba(240,238,255,0.8)',marginBottom:0,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,position:'relative'}}>{offer.description}</p>
-              </div>
-          }
-        </section>
-      )}
 
       {/* ─── SECTION 1: MEMBERSHIP PLANS ─── */}
       <section className="section" style={{textAlign:'center'}}>
@@ -433,7 +403,7 @@ export default function Pricing() {
             {/* Payment methods banner */}
             <div style={{marginTop:'clamp(28px,4vw,44px)',padding:'clamp(14px,2vw,20px) clamp(16px,3vw,28px)',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:16,display:'inline-flex',flexWrap:'wrap',gap:'clamp(12px,2vw,24px)',alignItems:'center',justifyContent:'center'}}>
               <span style={{color:'#6b6490',fontSize:12,fontWeight:600,letterSpacing:1,textTransform:'uppercase'}}>Accepted payments</span>
-              {[{icon:'💳',label:'Visa / Mastercard'},{icon:'🏦',label:'Net Banking'},{icon:'📱',label:'PhonePe UPI'},{icon:'🟣',label:'GPay / Paytm UPI'},{icon:'💬',label:'WhatsApp'}].map(p=>(
+              {[{icon:'💳',label:'Visa / Mastercard'},{icon:'🏦',label:'Net Banking'},{icon:'📱',label:'PhonePe UPI'},{icon:'🟣',label:'GPay / UPI'}].map(p=>(
                 <div key={p.label} style={{display:'flex',alignItems:'center',gap:6,fontSize:'clamp(11px,1.5vw,13px)',color:'#b8b0d4',fontWeight:500}}>
                   <span>{p.icon}</span>{p.label}
                 </div>
@@ -469,7 +439,11 @@ export default function Pricing() {
           <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,280px),1fr))',gap:'clamp(14px,2vw,28px)',maxWidth:1100,margin:'0 auto'}}>
             {ptPlans.map(plan => {
               const trainer = trainers.find(t => (t.id||t._uid) === plan.trainerId) || null
-              const hl = !!(linkedPlanId && plan.id===linkedPlanId)
+              // Highlight if: offer links this plan, OR user came from a specific trainer's "View PT Plan" button
+              const hl = !!(
+                (linkedPlanId && plan.id===linkedPlanId) ||
+                (trainerIdParam && plan.trainerId === trainerIdParam)
+              )
               return <div key={plan.id} ref={hl?highlightRef:null} style={{animation:hl?'pulseGlow 2s ease-in-out infinite':'none',borderRadius:'clamp(16px,2vw,24px)'}}><PTCard plan={plan} trainer={trainer} onSelect={setSelected} isHighlighted={hl}/></div>
             })}
           </div>

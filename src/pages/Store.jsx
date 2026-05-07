@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { openRazorpay, openPhonePeUPI, openWhatsAppOrder } from '../hooks/usePayment.jsx'
+import { openRazorpay, openPhonePeUPI } from '../hooks/usePayment.jsx'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -82,16 +82,18 @@ export default function Store() {
 
   async function doRazorpay(product, customer){
     setPayProduct(null); setPaying(product.id)
+    const basePrice    = product.price
+    const chargedPrice = Math.ceil(basePrice * 1.02)  // +2% processing fee
     info(`Opening payment for ${product.name}…`)
     await openRazorpay({
-      amount:      product.price,
+      amount:      chargedPrice,
       name:        product.name,
-      description: `${product.name} — Rs.${product.price}`,
+      description: `${product.name} — Rs.${chargedPrice} (incl. 2% fee)`,
       prefill:     { name:customer.name, email:customer.email, contact:customer.phone },
       meta: {
         type:'store_product', itemId:product.id, itemName:product.name,
         customerName:customer.name, customerEmail:customer.email, customerPhone:customer.phone,
-        productName:product.name, productPrice:product.price,
+        productName:product.name, productPrice:chargedPrice,
       },
       onSuccess: ()=>{ success(`Order confirmed! Check your email for details.`); setPaying(null) },
       onFailure: (msg)=>{ if(!msg.includes('cancelled')) error(msg); setPaying(null) },
@@ -105,33 +107,28 @@ export default function Store() {
     openPhonePeUPI({
       amount: product.price,
       name:   product.name,
-      onSuccess: ()=> success('UPI payment initiated! Share screenshot on WhatsApp to confirm.'),
+      onSuccess: ()=> success('UPI payment initiated! Share screenshot at the gym to confirm.'),
       onFailure: (msg)=> error(msg),
     })
   }
 
-  function doWhatsApp(product, customer){
-    setPayProduct(null)
-    const msg = `Hello! I want to order ${product.name} for Rs.${product.price}.\nName: ${customer?.name||''}\nPhone: ${customer?.phone||''}`
-    openWhatsAppOrder({ productName: product.name, price: product.price, msg })
-  }
-
   async function handleCartCheckout(customer){
     if(cart.length===0) return
-    const totalAmt = cart.reduce((s,i)=>s+i.price*i.qty,0)
+    const totalAmt   = cart.reduce((s,i)=>s+i.price*i.qty,0)
+    const chargedAmt = Math.ceil(totalAmt * 1.02)  // +2% processing fee
     const desc = cart.map(i=>`${i.name} x${i.qty}`).join(', ')
     setShowCart(false); setPaying('cart')
     info('Opening payment for cart…')
     await openRazorpay({
-      amount: totalAmt,
+      amount: chargedAmt,
       name: 'FFC Store Order',
-      description: desc,
+      description: `${desc} — Rs.${chargedAmt} (incl. 2% fee)`,
       prefill: { name:customer.name, email:customer.email, contact:customer.phone },
       meta: {
         type:'store_cart',
         customerName:customer.name, customerEmail:customer.email, customerPhone:customer.phone,
         items: cart.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})),
-        totalAmount:totalAmt, description:desc,
+        totalAmount:chargedAmt, description:desc,
       },
       onSuccess: ()=>{
         success(`Order placed! Check your email for confirmation.`)
@@ -369,7 +366,10 @@ export default function Store() {
                   <button onClick={()=>{ isCart ? handleCartCheckout(storeCustomer) : doRazorpay(payProduct, storeCustomer); close() }}
                     style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
                     <span style={{fontSize:20}}>💳</span>
-                    <div style={{textAlign:'left'}}><div>Card / Net Banking / UPI</div><div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>Razorpay — GPay, PhonePe, all banks</div></div>
+                    <div style={{textAlign:'left'}}>
+                      <div>Card / Net Banking / UPI</div>
+                      <div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>Razorpay — GPay, PhonePe, all banks · <span style={{color:'#f59e0b'}}>+2% processing fee</span></div>
+                    </div>
                     <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
                   </button>
                   {!isCart && (
@@ -380,12 +380,6 @@ export default function Store() {
                       <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
                     </button>
                   )}
-                  <button onClick={()=>{ doWhatsApp(isCart?{name:'Cart Order',price:total}:payProduct, storeCustomer); close() }}
-                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(37,211,102,0.08)',border:'1.5px solid rgba(37,211,102,0.2)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
-                    <span style={{fontSize:20}}>💬</span>
-                    <div style={{textAlign:'left'}}><div>WhatsApp Order</div><div style={{fontSize:11,color:'#4ade80',fontWeight:400}}>Chat to confirm &amp; pay manually</div></div>
-                    <span style={{marginLeft:'auto',color:'#4ade80'}}>›</span>
-                  </button>
                 </div>
               ) : (
                 <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name and phone to continue</p>
