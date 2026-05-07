@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast }) {
+export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast, isMainAdmin=true }) {
   const [tab, setTab]     = useState('products')
   const [store, setStore] = useState({ categories:[], subcategories:[], products:[] })
   const [loading, setLoading] = useState(true)
@@ -122,7 +122,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                   <Td><Badge label={p.inStock?'In Stock':'Out'} color={p.inStock?'green':'red'}/></Td>
                   <Td><div style={{ display:'flex',gap:6 }}>
                     <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...p,price:String(p.price)}); setModal('editProd') }}>Edit</Btn>
-                    <Btn size="sm" variant="danger" onClick={()=>delProd(p.id)}>Del</Btn>
+                    {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delProd(p.id)}>Del</Btn>}
                   </div></Td>
                 </tr>
               ))}
@@ -144,7 +144,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                 </div>
                 <div style={{ display:'flex',gap:8 }}>
                   <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...cat}); setModal('editCat') }}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={()=>delCat(cat.id)}>Delete</Btn>
+                  {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delCat(cat.id)}>Delete</Btn>}
                 </div>
               </div>
             </Card>
@@ -165,7 +165,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                 <Td style={{ color:C.muted,fontSize:13 }}>{store.products.filter(p=>p.subcategoryId===sub.id).length} items</Td>
                 <Td><div style={{ display:'flex',gap:6 }}>
                   <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...sub}); setModal('editSub') }}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={()=>delSub(sub.id)}>Del</Btn>
+                  {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delSub(sub.id)}>Del</Btn>}
                 </div></Td>
               </tr>
             ))}

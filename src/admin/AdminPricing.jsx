@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 const DEFAULT_FEATURES = ['Full gym access','Locker facility','Diet consultation','Group classes']
 
-export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast }) {
+export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast, isMainAdmin=true }) {
   const [plans,   setPlans]   = useState([])
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState(null)   // null | 'add' | plan-obj
@@ -18,7 +18,11 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
     setLoading(false)
   }, [])
 
+  const [trainers, setTrainers] = useState([])
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    apiFetch('/api/trainers').then(d => { if (Array.isArray(d)) setTrainers(d) }).catch(() => {})
+  }, [])
 
   const close = () => { setModal(null); setForm({}); setFeatInput('') }
 
@@ -28,10 +32,11 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
     popular:false, active:true,
     features:[...DEFAULT_FEATURES],
     description:'',
+    ptPlan:false, trainerId:'', maxStudents:5,
   }
 
   const openAdd  = () => { setForm({...blank, features:[...DEFAULT_FEATURES]}); setModal('add') }
-  const openEdit = (p) => { setForm({ ...p, price:String(p.originalPrice||p.price), features:[...(p.features||[])] }); setModal(p) }
+  const openEdit = (p) => { setForm({ ...p, price:String(p.originalPrice||p.price), features:[...(p.features||[])], ptPlan:!!p.ptPlan, trainerId:p.trainerId||'', maxStudents:p.maxStudents||5 }); setModal(p) }
 
   /* Add feature tag */
   const addFeature = () => {
@@ -55,6 +60,9 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
         discountType: form.discountType||'percent',
         popular:      !!form.popular,
         active:       form.active!==false,
+        ptPlan:       !!form.ptPlan,
+        trainerId:    form.trainerId||'',
+        maxStudents:  Number(form.maxStudents)||5,
       }
       if (modal==='add') await apiFetch('/api/admin/plans','POST',payload)
       else               await apiFetch(`/api/admin/plans/${modal.id}`,'PUT',payload)
@@ -159,7 +167,7 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
                 <Btn size="sm" variant={plan.popular?'muted':'ghost'} onClick={()=>togglePopular(plan)}>
                   {plan.popular?'Unpin':'⭐ Popular'}
                 </Btn>
-                <Btn size="sm" variant="danger" onClick={()=>del(plan.id)}>Del</Btn>
+                {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>del(plan.id)}>Del</Btn>}
               </div>
             </Card>
           )
@@ -216,6 +224,31 @@ export default function AdminPricing({ apiFetch, ImageUploader, Btn, Card, Modal
                     <option value="yes">Yes — show badge</option>
                   </select>
                 </FR>
+              </div>
+
+              {/* PT Plan toggle */}
+              <div style={{background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px',marginTop:8}}>
+                <FR label="Plan Type">
+                  <select style={inp} value={form.ptPlan?'pt':'membership'} onChange={e=>set('ptPlan',e.target.value==='pt')}>
+                    <option value="membership">Regular Membership Plan</option>
+                    <option value="pt">Personal Trainer Plan</option>
+                  </select>
+                </FR>
+                {form.ptPlan && (
+                  <>
+                    <FR label="Linked Trainer">
+                      <select style={inp} value={form.trainerId||''} onChange={e=>set('trainerId',e.target.value)}>
+                        <option value="">— Select Trainer (optional) —</option>
+                        {trainers.filter(t=>t.status!=='Inactive').map(t=>(
+                          <option key={t.id||t._uid} value={t.id||t._uid}>{t.name} — {t.role}</option>
+                        ))}
+                      </select>
+                    </FR>
+                    <FR label="Max Students (intake cap)">
+                      <input style={inp} type="number" min={1} max={20} value={form.maxStudents||5} onChange={e=>set('maxStudents',e.target.value)} placeholder="5"/>
+                    </FR>
+                  </>
+                )}
               </div>
             </div>
 

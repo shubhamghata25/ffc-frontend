@@ -11,7 +11,7 @@ const LEVELS  = ['Beginner','Intermediate','Advanced']
 const MUSCLES = ['Chest','Legs','Biceps','Back','Shoulders','Cardio','Full Body','Arms','Core']
 const LEVEL_COLORS = { Beginner:'#22c55e', Intermediate:'#f59e0b', Advanced:'#ef4444' }
 
-export default function AdminExercises({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast }) {
+export default function AdminExercises({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast, isMainAdmin=true }) {
   const [exercises, setExercises] = useState([])
   const [loading, setLoading]     = useState(true)
   const [modal, setModal]         = useState(null)
@@ -100,7 +100,7 @@ export default function AdminExercises({ apiFetch, ImageUploader, Btn, Card, Mod
                 )}
                 <div style={{ display:'flex',gap:8 }}>
                   <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...ex}); setModal('edit') }}>Edit</Btn>
-                  <Btn size="sm" variant="danger" onClick={()=>del(ex.id)}>Delete</Btn>
+                  {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>del(ex.id)}>Delete</Btn>}
                 </div>
               </div>
             </Card>
