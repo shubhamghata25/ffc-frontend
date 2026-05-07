@@ -347,10 +347,13 @@ export default function Pricing() {
     fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
   },[])
 
+  // If offer has linked plan, highlight it
+  const linkedPlanId = offer?.linkedPlanId || null
+
   // Highlighted plan ref for auto-scroll
   const highlightRef = useRef(null)
 
-  // Scroll to PT section if hash present, or to highlighted plan if offer param
+  // Scroll to PT section if hash present
   useEffect(()=>{
     if(loading) return
     if(window.location.hash==='#personal-trainers' && ptRef.current){
@@ -363,9 +366,6 @@ export default function Pricing() {
       setTimeout(()=>highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'}),400)
     }
   },[loading, linkedPlanId])
-
-  // If offer has linked plan, highlight it (from URL ?offer= param or from loaded offer)
-  const linkedPlanId = offer?.linkedPlanId || null
 
   const membershipPlans = plans.filter(p => !p.ptPlan)
   const ptPlans         = plans.filter(p => p.ptPlan)
