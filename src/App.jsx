@@ -1,5 +1,11 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
 import Navbar    from './components/Navbar.jsx'
 import Footer    from './components/Footer.jsx'
 import Home      from './pages/Home.jsx'
@@ -18,13 +24,17 @@ function Layout() {
 
   // Kiosk gets full screen with no navbar/footer
   if (isKiosk) return (
-    <Routes>
-      <Route path="/kiosk" element={<KioskPage />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/kiosk" element={<KioskPage />} />
+      </Routes>
+    </>
   )
 
   return (
     <>
+      <ScrollToTop />
       {!isAdmin && <Navbar />}
       <Routes>
         <Route path="/"          element={<Home />} />
