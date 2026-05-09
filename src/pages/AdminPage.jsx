@@ -1058,7 +1058,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
               Aadhaar Card Photo <span style={{color:'#6b6490',fontWeight:400,textTransform:'none',letterSpacing:0}}>(Optional)</span>
             </div>
             {!form.aadhaarPhoto && (
-              <div style={{display:'flex',gap:10'}}>
+              <div style={{display:'flex',gap:10}}>
                 <label style={{flex:1,padding:'10px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7',display:'block'}}>
                   📁 Upload Photo
                   <input type="file" accept="image/*" onChange={e=>{
