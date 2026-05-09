@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 
 const DEFAULT_TRAINERS = [
   { id:'1', name:'Nagendra Singh', role:'Head Trainer',  exp:'8+ Years', spec:'Strength & Fat Loss Expert',     status:'Active', photo:'' },

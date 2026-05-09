@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { openRazorpay, openPhonePeUPI } from '../hooks/usePayment.jsx'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 const PH  = 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=400'
 
 /* ── Cart ── */

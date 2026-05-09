@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 
 const COUNTRY_CODES = [
   { code:'+91', flag:'🇮🇳', label:'India'     },

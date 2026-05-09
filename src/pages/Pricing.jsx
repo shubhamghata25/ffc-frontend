@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { openRazorpay, openPhonePeUPI } from '../hooks/usePayment.jsx'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 
 /* ─── Payment method modal ─── */
 function PayModal({ plan, onClose, onDone }) {

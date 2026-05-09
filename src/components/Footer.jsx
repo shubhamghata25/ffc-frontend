@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 
 /* SVG Social Icons — no external icon library needed */
 const Icons = {

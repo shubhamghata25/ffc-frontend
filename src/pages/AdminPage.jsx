@@ -13,7 +13,7 @@ import AdminPricing   from '../admin/AdminPricing.jsx'
 // 4. All admin API calls send `Authorization: Bearer <token>`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API   = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API   = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 const PLANS = ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999']
 const uid   = () => Math.random().toString(36).slice(2,9)
 
