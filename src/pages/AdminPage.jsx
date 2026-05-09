@@ -816,7 +816,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
   // Plan period → days map for auto end-date calculation
   const PERIOD_DAYS = { 'Monthly':30, 'Quarterly':91, 'Half Yearly':182, 'Yearly':365 }
 
-  const blank = { name:'', phone:'', email:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'' }
+  const blank = { name:'', phone:'', email:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'', aadhaarPhoto:'' }
   const [form, setForm] = useState(blank)
   const set = (k, v) => {
     setForm(f => {
@@ -1051,6 +1051,33 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
               </select>
             </FR>
           </div>
+
+          {/* Aadhaar — optional */}
+          <div style={{border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px',marginTop:4}}>
+            <div style={{fontSize:11,color:'#bb86fc',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>
+              Aadhaar Card Photo <span style={{color:'#6b6490',fontWeight:400,textTransform:'none',letterSpacing:0}}>(Optional)</span>
+            </div>
+            {!form.aadhaarPhoto && (
+              <div style={{display:'flex',gap:10'}}>
+                <label style={{flex:1,padding:'10px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7',display:'block'}}>
+                  📁 Upload Photo
+                  <input type="file" accept="image/*" onChange={e=>{
+                    const file=e.target.files[0]; if(!file) return
+                    const r=new FileReader()
+                    r.onload=ev=>set('aadhaarPhoto',ev.target.result)
+                    r.readAsDataURL(file)
+                  }} style={{display:'none'}}/>
+                </label>
+              </div>
+            )}
+            {form.aadhaarPhoto && (
+              <div style={{textAlign:'center'}}>
+                <img src={form.aadhaarPhoto} alt="Aadhaar" style={{width:'100%',borderRadius:10,maxHeight:160,objectFit:'cover',marginBottom:8}}/>
+                <button onClick={()=>set('aadhaarPhoto','')} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:12}}>✕ Remove</button>
+              </div>
+            )}
+          </div>
+
           <div style={{display:'flex',gap:10,marginTop:12}}>
             <Btn onClick={save} disabled={saving} style={{flex:2,justifyContent:'center',fontSize:15}}>
               {saving ? <Spinner/> : modal==='add' ? '🪪 Register & Generate Card' : '💾 Save Changes'}

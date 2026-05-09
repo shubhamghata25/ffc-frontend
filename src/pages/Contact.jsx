@@ -15,7 +15,7 @@ const INFO = [
   { icon:'📍', title:'Address',  lines:['RT Complex, 2nd Floor,','Wardhaman Nagar, Nagpur'] },
   { icon:'📞', title:'Phone',    lines:['+91 84848 05154'] },
   { icon:'✉️', title:'Email',    lines:['friendsfitnessclub18@gmail.com'] },
-  { icon:'🕐', title:'Timings',  lines:['Mon–Sat: 5:00 AM – 10:00 PM','Sunday: Closed'] },
+  { icon:'🕐', title:'Timings',  lines:['Mon–Sat: Morning 5:00 AM – 11:00 AM','Mon–Sat: Evening 4:30 PM – 10:00 PM','Sunday: Closed'] },
 ]
 
 export default function Contact() {

@@ -74,11 +74,11 @@ export default function Store() {
   }
 
   // Customer detail state for store checkout
-  const [storeCustomer, setStoreCustomer] = useState({ name:'', email:'', phone:'' })
+  const [storeCustomer, setStoreCustomer] = useState({ name:'', email:'', phone:'', address:'' })
   const [showCustomerForm, setShowCustomerForm] = useState(null) // 'product'|'cart'
   const [pendingProduct, setPendingProduct] = useState(null)
   const setC = (k,v) => setStoreCustomer(f=>({...f,[k]:v}))
-  const customerValid = storeCustomer.name.trim().length>1 && storeCustomer.phone.replace(/\D/g,'').length>=10
+  const customerValid = storeCustomer.name.trim().length>1 && storeCustomer.phone.replace(/\D/g,'').length>=10 && storeCustomer.address.trim().length>5
 
   async function doRazorpay(product, customer){
     setPayProduct(null); setPaying(product.id)
@@ -359,6 +359,10 @@ export default function Store() {
                   <input value={storeCustomer.email} onChange={e=>setC('email',e.target.value)} placeholder="your@email.com" type="email" style={inpS}/>
                   <p style={{fontSize:11,color:'#7c3aed',marginTop:5}}>📧 Order confirmation will be sent to this email</p>
                 </div>
+                <div>
+                  <label style={{fontSize:11,color:'#6b6490',display:'block',marginBottom:4}}>Delivery Address *</label>
+                  <input value={storeCustomer.address} onChange={e=>setC('address',e.target.value)} placeholder="House No, Street, Area, City" style={inpS}/>
+                </div>
               </div>
               {/* Payment buttons */}
               {customerValid ? (
@@ -382,7 +386,7 @@ export default function Store() {
                   )}
                 </div>
               ) : (
-                <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name and phone to continue</p>
+                <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name, phone and address to continue</p>
               )}
               <button onClick={close} style={{width:'100%',marginTop:12,padding:'10px',background:'rgba(255,255,255,0.04)',border:'none',borderRadius:10,color:'#6b6490',cursor:'pointer',fontFamily:"'Poppins',sans-serif",fontSize:13}}>Cancel</button>
             </div>

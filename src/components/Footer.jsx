@@ -31,7 +31,7 @@ const Icons = {
 const SOCIAL = [
   { key:'Instagram', label:'Instagram',   url:'https://www.instagram.com/friends_fitness.club', color:'#E1306C' },
   { key:'YouTube',   label:'YouTube',     url:'https://www.youtube.com/@friendsfitnessclub',    color:'#FF0000' },
-  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/profile.php?id=61550631891260',    color:'#1877F2' },
+  { key:'Facebook',  label:'Facebook',    url:'https://www.facebook.com/friendsfitnessclub',    color:'#1877F2' },
   { key:'WhatsApp',  label:'WhatsApp',    url:'https://wa.me/918484805154',                     color:'#25D366' },
 ]
 
@@ -90,12 +90,12 @@ export default function Footer() {
           <h4 style={{ color:'#bb86fc', marginBottom:16, fontSize:13, fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>Contact</h4>
           {[
             '📍 RT Complex, 2nd Floor',
-            '   Wardhaman Nagar, Amravati Road,',
-            ' Nagpur - 440023',
+            '   Wardhaman Nagar, Nagpur',
             '📞 +91 84848 05154',
             '✉️ friendsfitnessclub18@gmail.com',
-            '🕐 Mon–Sat: 5:00 AM - 11:00 AM', 
-            'and 4:30 PM - 10:00 PM',
+            '🕐 Mon–Sat Morning: 5:00 AM – 11:00 AM',
+            '🕐 Mon–Sat Evening: 4:30 PM – 10:00 PM',
+            '❌ Sunday: Closed',
           ].map((t,i) => <p key={i} style={{ color:'rgba(184,176,212,0.6)', fontSize:13, marginBottom:7, lineHeight:1.6 }}>{t}</p>)}
         </div>
 

@@ -263,7 +263,7 @@ export default function Home() {
           ))}
         </div>
         <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
-          <Link to="/pricing#personal-trainers" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'12px 32px'}}>View All Trainer Plans →</Link>
+          <Link to="/pricing?section=pt" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'12px 32px'}}>View All Trainer Plans →</Link>
         </div>
       </section>
 

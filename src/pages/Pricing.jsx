@@ -8,11 +8,48 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 function PayModal({ plan, onClose, onDone }) {
   const [step, setStep]   = useState('details')   // 'details' | 'method'
   const [paying, setPaying] = useState(false)
-  const [form, setForm]   = useState({ name:'', email:'', phone:'' })
+  const [form, setForm]   = useState({ name:'', email:'', phone:'', address:'', aadhaar:'' })
+  const [aadhaarPreview, setAadhaarPreview] = useState(null)
+  const [capturing, setCapturing] = useState(false)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
   const { toasts, success, error, info } = useToast()
   const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent)
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const valid = form.name.trim().length > 1 && form.phone.replace(/\D/g,'').length >= 10
+  const valid = form.name.trim().length > 1 && form.phone.replace(/\D/g,'').length >= 10 && form.address.trim().length > 5
+
+  function handleAadhaarUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => { setAadhaarPreview(ev.target.result); setF('aadhaar', ev.target.result) }
+    reader.readAsDataURL(file)
+  }
+
+  async function startCamera() {
+    setCapturing(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } })
+      streamRef.current = stream
+      if (videoRef.current) videoRef.current.srcObject = stream
+    } catch { error('Camera access denied'); setCapturing(false) }
+  }
+
+  function capturePhoto() {
+    const canvas = document.createElement('canvas')
+    canvas.width = videoRef.current.videoWidth
+    canvas.height = videoRef.current.videoHeight
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+    setAadhaarPreview(dataUrl); setF('aadhaar', dataUrl)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    setCapturing(false)
+  }
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    setCapturing(false)
+  }
 
   const inpStyle = {
     width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.04)',
@@ -31,6 +68,7 @@ function PayModal({ plan, onClose, onDone }) {
       meta: {
         type:'membership', itemId:plan.id, itemName:plan.label,
         memberName:form.name, memberEmail:form.email, memberPhone:form.phone,
+        memberAddress:form.address, aadhaarPhoto:form.aadhaar||'',
         planLabel:plan.label, planPeriod:plan.period, planPrice:plan.price,
       },
       onSuccess: () => {
@@ -99,11 +137,49 @@ function PayModal({ plan, onClose, onDone }) {
                   Your QR attendance code + confirmation will be sent here
                 </p>
               </div>
+              <div>
+                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:5 }}>Address *</label>
+                <input value={form.address} onChange={e=>setF('address',e.target.value)}
+                  placeholder="House No, Street, Area, City" style={inpStyle}/>
+              </div>
+
+              {/* Aadhaar — optional */}
+              <div style={{ border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px' }}>
+                <label style={{ fontSize:11,color:'#bb86fc',display:'block',marginBottom:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase' }}>
+                  Aadhaar Card Photo <span style={{color:'#6b6490',fontWeight:400,textTransform:'none',letterSpacing:0}}>(Optional)</span>
+                </label>
+                {!capturing && !aadhaarPreview && (
+                  <div style={{ display:'flex',gap:10 }}>
+                    <label style={{ flex:1,padding:'10px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7' }}>
+                      📁 Upload
+                      <input type="file" accept="image/*" onChange={handleAadhaarUpload} style={{ display:'none' }}/>
+                    </label>
+                    <button onClick={startCamera} style={{ flex:1,padding:'10px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,background:'none',color:'#9c59f7',cursor:'pointer',fontSize:13 }}>
+                      📷 Capture
+                    </button>
+                  </div>
+                )}
+                {capturing && (
+                  <div style={{ textAlign:'center' }}>
+                    <video ref={videoRef} autoPlay playsInline style={{ width:'100%',borderRadius:10,maxHeight:200,objectFit:'cover' }}/>
+                    <div style={{ display:'flex',gap:10,marginTop:10 }}>
+                      <button onClick={capturePhoto} style={{ flex:1,padding:'10px',background:'linear-gradient(135deg,#7c3aed,#9c59f7)',border:'none',borderRadius:10,color:'#fff',cursor:'pointer',fontWeight:700,fontSize:13 }}>📸 Capture</button>
+                      <button onClick={stopCamera} style={{ flex:1,padding:'10px',background:'none',border:'1px solid rgba(124,58,237,0.3)',borderRadius:10,color:'#6b6490',cursor:'pointer',fontSize:13 }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+                {aadhaarPreview && (
+                  <div style={{ textAlign:'center' }}>
+                    <img src={aadhaarPreview} alt="Aadhaar" style={{ width:'100%',borderRadius:10,maxHeight:160,objectFit:'cover',marginBottom:8 }}/>
+                    <button onClick={()=>{ setAadhaarPreview(null); setF('aadhaar','') }} style={{ background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:12 }}>✕ Remove</button>
+                  </div>
+                )}
+              </div>
               <button onClick={() => setStep('method')} disabled={!valid}
                 style={{ padding:'14px',border:'none',borderRadius:40,background:valid?'linear-gradient(135deg,#7c3aed,#9c59f7)':'rgba(124,58,237,0.2)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:valid?'pointer':'not-allowed',marginTop:4 }}>
                 Continue to Payment →
               </button>
-              {!valid && <p style={{ textAlign:'center',fontSize:11,color:'#6b6490' }}>Name and phone number are required</p>}
+              {!valid && <p style={{ textAlign:'center',fontSize:11,color:'#6b6490' }}>Name, phone number and address are required</p>}
             </div>
           )}
 
@@ -331,6 +407,7 @@ export default function Pricing() {
   const searchParams  = new URLSearchParams(window.location.search)
   const highlightId   = searchParams.get('offer')
   const trainerIdParam = searchParams.get('trainerId')  // from "View PT Plan" buttons
+  const sectionParam   = searchParams.get('section')    // 'pt' → scroll to PT section
 
   const loadPlans = () => {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
@@ -344,15 +421,15 @@ export default function Pricing() {
   // If offer has linked plan, highlight it. trainerId param also highlights that trainer's plan.
   const linkedPlanId = offer?.linkedPlanId || null
 
-  // Scroll to PT section when trainerId param is present
+  // Scroll to PT section when trainerId param or section=pt is present
   useEffect(()=>{
     if(loading) return
-    if(!trainerIdParam) return
+    if(!trainerIdParam && sectionParam !== 'pt') return
     const timer = setTimeout(()=>{
       if(ptRef.current) ptRef.current.scrollIntoView({behavior:'smooth',block:'start'})
     }, 300)
     return () => clearTimeout(timer)
-  },[loading, trainerIdParam])
+  },[loading, trainerIdParam, sectionParam])
 
   // Scroll to highlighted plan card (offer-linked)
   useEffect(()=>{
