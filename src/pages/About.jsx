@@ -115,7 +115,7 @@ export default function About() {
           ))}
         </div>
 
-        <Link to="/pricing?trainerId" className="btn" style={{ fontSize:16, padding:'14px 42px' }}>Join Now →</Link>
+        <Link to="/pricing" className="btn" style={{ fontSize:16, padding:'14px 42px' }}>Join Now →</Link>
       </section>
     </div>
   )
