@@ -1571,6 +1571,7 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
     eveningClose:'10:00 PM',
     days:'Monday – Saturday',
     holiday:'Closed on Sunday',
+    notice:'',
   })
   const setG = (k,v) => setGymForm(f=>({...f,[k]:v}))
 
@@ -1635,6 +1636,9 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
           <FR label="Evening Open"><input style={inp} value={gymForm.eveningOpen} onChange={e=>setG('eveningOpen',e.target.value)} placeholder="4:30 PM"/></FR>
           <FR label="Evening Close"><input style={inp} value={gymForm.eveningClose} onChange={e=>setG('eveningClose',e.target.value)} placeholder="10:00 PM"/></FR>
           <FR label="Holiday"><input style={inp} value={gymForm.holiday} onChange={e=>setG('holiday',e.target.value)}/></FR>
+          <FR label="Notice / Announcement">
+            <textarea style={{...inp,minHeight:72,resize:'vertical'}} value={gymForm.notice} onChange={e=>setG('notice',e.target.value)} placeholder="e.g. Closed on 15th Aug for Independence Day"/>
+          </FR>
           {gymMsg&&<div style={{marginBottom:10,padding:'8px 12px',borderRadius:8,background:gymMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:gymMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{gymMsg.ok?'✅':'❌'} {gymMsg.msg}</div>}
           <Btn onClick={saveGymInfo} disabled={gymSaving}>{gymSaving?<Spinner/>:'Save Timings'}</Btn>
         </Card>
@@ -1670,6 +1674,133 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
   )
 }
 
+function Reels({ apiFetch, token, toast }) {
+  const [reels, setReels] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(null) // null | 'add' | reel object
+  const blank = { url:'', caption:'', order:0, active:true }
+  const [form, setForm] = useState(blank)
+  const [saving, setSaving] = useState(false)
+  const set = (k,v) => setForm(f=>({...f,[k]:v}))
+
+  const load = async () => {
+    setLoading(true)
+    try { setReels(await apiFetch('/api/admin/reels')) } catch{}
+    setLoading(false)
+  }
+  useEffect(()=>{ load() },[])
+
+  const save = async () => {
+    if (!form.url.trim()) { toast('URL is required','error'); return }
+    setSaving(true)
+    try {
+      if (modal === 'add') await apiFetch('/api/admin/reels','POST', form)
+      else await apiFetch(`/api/admin/reels/${modal.id||modal._uid}`,'PUT', form)
+      toast(modal==='add'?'Reel added!':'Reel updated!','success')
+      setModal(null); load()
+    } catch(e){ toast(e.message||'Failed','error') }
+    setSaving(false)
+  }
+
+  const del = async (id) => {
+    if (!confirm('Delete this reel?')) return
+    try { await apiFetch(`/api/admin/reels/${id}`,'DELETE'); toast('Deleted','success'); load() }
+    catch(e){ toast(e.message||'Failed','error') }
+  }
+
+  const toggleActive = async (r) => {
+    try {
+      await apiFetch(`/api/admin/reels/${r.id||r._uid}`,'PUT',{...r, active:!r.active})
+      load()
+    } catch{}
+  }
+
+  // Detect type for preview
+  const getType = url => {
+    if (!url) return null
+    if (url.includes('youtube.com')||url.includes('youtu.be')) return 'youtube'
+    if (url.includes('instagram.com')) return 'instagram'
+    return 'unknown'
+  }
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22,flexWrap:'wrap',gap:10}}>
+        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>INSTAGRAM / VIDEO REELS</h2>
+        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Reel</Btn>
+      </div>
+      <p style={{fontSize:13,color:'#6b6490',marginBottom:20,lineHeight:1.7}}>
+        Add Instagram post URLs or YouTube video/Shorts URLs. They appear as a horizontal scroll section on the Home page. Only active reels are shown publicly.
+      </p>
+      {loading ? <div style={{textAlign:'center',padding:40}}><Spinner/></div> :
+        reels.length === 0 ? (
+          <Card style={{padding:40,textAlign:'center'}}>
+            <div style={{fontSize:40,marginBottom:12}}>📸</div>
+            <p style={{color:'#6b6490'}}>No reels yet. Add your first Instagram or YouTube link!</p>
+          </Card>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16}}>
+            {reels.map(r=>(
+              <Card key={r.id||r._uid} style={{padding:18,opacity:r.active?1:0.55}}>
+                {/* Type badge */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,background:getType(r.url)==='youtube'?'rgba(255,0,0,0.15)':'rgba(225,48,108,0.15)',color:getType(r.url)==='youtube'?'#ff4444':'#E1306C',fontWeight:700}}>
+                    {getType(r.url)==='youtube'?'▶ YouTube':'📸 Instagram'}
+                  </span>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontSize:11,color:r.active?'#22c55e':'#6b6490'}}>{r.active?'Live':'Hidden'}</span>
+                    <button onClick={()=>toggleActive(r)} style={{width:36,height:20,borderRadius:10,border:'none',cursor:'pointer',background:r.active?'#22c55e':'rgba(124,58,237,0.2)',position:'relative',transition:'background .2s'}}>
+                      <span style={{position:'absolute',top:3,left:r.active?18:3,width:14,height:14,borderRadius:'50%',background:'#fff',transition:'left .2s'}}/>
+                    </button>
+                  </div>
+                </div>
+                {/* URL preview */}
+                <div style={{fontSize:12,color:'#6b6490',marginBottom:6,wordBreak:'break-all',lineHeight:1.4,maxHeight:36,overflow:'hidden'}}>{r.url}</div>
+                {r.caption && <div style={{fontSize:13,color:'#f0eeff',marginBottom:10,lineHeight:1.5}}>{r.caption}</div>}
+                <div style={{fontSize:11,color:'#6b6490',marginBottom:12}}>Order: {r.order}</div>
+                <div style={{display:'flex',gap:8}}>
+                  <Btn size="sm" variant="ghost" style={{flex:1,justifyContent:'center'}} onClick={()=>{setForm({url:r.url,caption:r.caption||'',order:r.order||0,active:r.active});setModal(r)}}>Edit</Btn>
+                  <Btn size="sm" variant="danger" style={{flex:1,justifyContent:'center'}} onClick={()=>del(r.id||r._uid)}>Delete</Btn>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      }
+
+      {/* Add / Edit Modal */}
+      {modal && (
+        <Modal title={modal==='add'?'Add Reel':'Edit Reel'} onClose={()=>setModal(null)}>
+          <FR label="URL *">
+            <input style={inp} value={form.url} onChange={e=>set('url',e.target.value)} placeholder="https://www.instagram.com/p/... or https://youtu.be/..."/>
+          </FR>
+          <p style={{fontSize:11,color:'#6b6490',marginTop:-8,marginBottom:12,lineHeight:1.6}}>
+            Paste an Instagram post URL or YouTube video/Shorts URL
+          </p>
+          <FR label="Caption (optional)">
+            <textarea style={{...inp,minHeight:68,resize:'vertical'}} value={form.caption} onChange={e=>set('caption',e.target.value)} placeholder="Short description shown below the reel"/>
+          </FR>
+          <FR label="Order (lower = first)">
+            <input style={inp} type="number" value={form.order} onChange={e=>set('order',Number(e.target.value))} min="0"/>
+          </FR>
+          <FR label="Status">
+            <select style={inp} value={form.active?'true':'false'} onChange={e=>set('active',e.target.value==='true')}>
+              <option value="true">Active (show on home page)</option>
+              <option value="false">Hidden</option>
+            </select>
+          </FR>
+          <div style={{display:'flex',gap:10,marginTop:4}}>
+            <Btn onClick={save} disabled={saving} style={{flex:2,justifyContent:'center'}}>
+              {saving?<Spinner/>:modal==='add'?'Add Reel':'Save Changes'}
+            </Btn>
+            <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
 const NAV_ALL = [
   {id:'dashboard',  icon:'⚡', label:'Dashboard',  adminOnly:false },
   {id:'members',    icon:'👥', label:'Members',    adminOnly:false },
@@ -1680,6 +1811,7 @@ const NAV_ALL = [
   {id:'store',      icon:'🛒', label:'Store',      adminOnly:false },
   {id:'pricing',    icon:'💳', label:'Pricing',    adminOnly:false },
   {id:'exercises',  icon:'🏃', label:'Exercises',  adminOnly:false },
+  {id:'reels',      icon:'📸', label:'Reels',      adminOnly:true  },
   {id:'revenue',    icon:'📈', label:'Revenue',    adminOnly:true  },
   {id:'expenses',   icon:'💸', label:'Expenses',   adminOnly:true  },
   {id:'subadmins',  icon:'👥', label:'Sub-Admins', adminOnly:true  },
@@ -2449,6 +2581,7 @@ export default function AdminPage() {
     pricing:    <AdminPricing   {...shared} isMainAdmin={isMainAdmin}/>,
     exercises:  <AdminExercises {...shared} isMainAdmin={isMainAdmin}/>,
     // Main-admin-only pages
+    reels:      isMainAdmin ? <Reels apiFetch={apiFetch} token={token} toast={showToast}/> : <AccessDenied/>,
     revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members,isMainAdmin}} toast={showToast}/> : <AccessDenied/>,
     expenses:   isMainAdmin ? <Expenses  apiFetch={apiFetch} toast={showToast} isMainAdmin={isMainAdmin}/>    : <AccessDenied/>,
     subadmins:  isMainAdmin ? <SubAdmins apiFetch={apiFetch} toast={showToast}/> : <AccessDenied/>,

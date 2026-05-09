@@ -44,10 +44,14 @@ export default function Home() {
   useEffect(()=>{ const t=setInterval(()=>setTIdx(i=>(i+1)%TESTIMONIALS.length),3400); return()=>clearInterval(t) },[])
   const [offer,setOffer]=useState(null)
   const [trainersList,setTrainersList]=useState([])
+  const [reels,setReels]=useState([])
+  const [gymInfo,setGymInfo]=useState(null)
   useEffect(()=>{
     const api=import.meta.env.VITE_API_URL; if(!api)return
     fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
     fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
+    fetch(`${api}/api/reels`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setReels(d)}).catch(()=>{})
+    fetch(`${api}/api/gym-info`).then(r=>r.json()).then(d=>setGymInfo(d)).catch(()=>{})
   },[])
 
   return (
@@ -222,6 +226,59 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── INSTAGRAM REELS ─── */}
+      {reels.length > 0 && (
+        <section style={{background:'rgba(6,5,15,0.98)',padding:'clamp(48px,8vw,80px) 0',borderTop:'1px solid rgba(124,58,237,0.1)',textAlign:'center',overflow:'hidden'}}>
+          <div className="accent-line"/>
+          <h2 className="section-title" style={{marginBottom:6,padding:'0 6%'}}>Our <span>Instagram</span></h2>
+          <p className="section-sub" style={{margin:'0 auto 32px',fontSize:'clamp(13px,2vw,15px)',padding:'0 6%'}}>Follow us for daily workouts, transformations &amp; motivation.</p>
+          <div style={{display:'flex',gap:16,overflowX:'auto',padding:'8px 6% 20px',scrollbarWidth:'none',WebkitOverflowScrolling:'touch',scrollSnapType:'x mandatory'}}>
+            {reels.map(reel=>{
+              // Detect YouTube vs Instagram
+              const isYT = reel.url.includes('youtube.com') || reel.url.includes('youtu.be')
+              const ytId = isYT ? (reel.url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?/]+)/)||[])[1] : null
+              const igUrl = !isYT ? reel.url.replace('/p/','/p/').replace(/\/?$/,'/embed/') : null
+              return (
+                <div key={reel._uid||reel.id} style={{flexShrink:0,width:'clamp(260px,72vw,320px)',scrollSnapAlign:'start',borderRadius:18,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'rgba(13,11,26,0.9)'}}>
+                  <div style={{position:'relative',width:'100%',paddingBottom: isYT ? '56.25%' : '125%',background:'#0d0b1a'}}>
+                    {isYT && ytId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`}
+                        title={reel.caption||'Video'}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                        allowFullScreen
+                        style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}
+                      />
+                    ) : (
+                      <iframe
+                        src={igUrl}
+                        title={reel.caption||'Instagram'}
+                        frameBorder="0"
+                        scrolling="no"
+                        allowTransparency
+                        style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}}
+                      />
+                    )}
+                  </div>
+                  {reel.caption && (
+                    <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left'}}>
+                      {reel.caption}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <a href="https://www.instagram.com/friends_fitness.club" target="_blank" rel="noreferrer"
+            style={{display:'inline-flex',alignItems:'center',gap:8,marginTop:8,padding:'10px 28px',borderRadius:50,border:'1px solid rgba(225,48,108,0.4)',color:'#E1306C',fontSize:14,fontWeight:600,textDecoration:'none',transition:'all .25s'}}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(225,48,108,0.1)';e.currentTarget.style.borderColor='#E1306C'}}
+            onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor='rgba(225,48,108,0.4)'}}>
+            📸 Follow on Instagram
+          </a>
+        </section>
+      )}
+
       {/* ─── TESTIMONIALS ─── */}
       <section style={{background:'rgba(13,11,26,0.8)',padding:'clamp(48px,8vw,80px) 6%',textAlign:'center',borderTop:'1px solid rgba(124,58,237,0.1)'}}>
         <div className="accent-line"/>
@@ -280,16 +337,50 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── CTA ─── */}
-      <section style={{padding:'clamp(56px,10vw,90px) 6%',textAlign:'center',background:'linear-gradient(135deg,#0d0b1a,#1a0a3e,#0d0b1a)',borderTop:'1px solid rgba(124,58,237,0.15)',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',top:-60,left:'50%',transform:'translateX(-50%)',width:'min(500px,90vw)',height:'min(500px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.14) 0%,transparent 65%)',pointerEvents:'none'}}/>
-        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(32px,7vw,70px)',letterSpacing:'clamp(1px,1vw,3px)',marginBottom:12,position:'relative'}}>
-          Ready to <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Transform?</span>
-        </h2>
-        <p style={{color:'var(--textSub)',fontSize:'clamp(13px,1.8vw,16px)',marginBottom:28,lineHeight:1.7,maxWidth:460,margin:'0 auto 28px',position:'relative'}}>
-          Join 200+ members who already changed their lives at Friends Fitness Club, Nagpur.
-        </p>
-        <Link to="/pricing" className="btn" style={{fontSize:'clamp(13px,2vw,16px)',padding:'clamp(11px,2vw,14px) clamp(24px,4vw,42px)',position:'relative'}}>View Membership Plans</Link>
+      {/* ─── GYM INFO BANNER ─── */}
+      <section style={{padding:'clamp(48px,8vw,72px) 6%',background:'linear-gradient(135deg,#0d0b1a,#1a0a3e,#0d0b1a)',borderTop:'1px solid rgba(124,58,237,0.15)',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:-60,left:'50%',transform:'translateX(-50%)',width:'min(500px,90vw)',height:'min(500px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1) 0%,transparent 65%)',pointerEvents:'none'}}/>
+        <div style={{position:'relative',maxWidth:900,margin:'0 auto',textAlign:'center'}}>
+          <div className="accent-line"/>
+          <h2 className="section-title" style={{marginBottom:8}}>Gym <span>Timings</span></h2>
+          <p className="section-sub" style={{marginBottom:36,fontSize:'clamp(13px,1.8vw,15px)'}}>We're open 6 days a week — choose your preferred slot!</p>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:16,marginBottom: gymInfo?.notice ? 28 : 0}}>
+            {/* Morning Slot */}
+            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
+              <div style={{fontSize:32,marginBottom:10}}>🌅</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Morning</div>
+              <div style={{fontSize:'clamp(15px,2.5vw,20px)',fontWeight:700,color:'#bb86fc',marginBottom:4}}>
+                {gymInfo?.morningOpen||'5:00 AM'} – {gymInfo?.morningClose||'11:00 AM'}
+              </div>
+              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>{gymInfo?.days||'Monday – Saturday'}</div>
+            </div>
+            {/* Evening Slot */}
+            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
+              <div style={{fontSize:32,marginBottom:10}}>🌆</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Evening</div>
+              <div style={{fontSize:'clamp(15px,2.5vw,20px)',fontWeight:700,color:'#bb86fc',marginBottom:4}}>
+                {gymInfo?.eveningOpen||'4:30 PM'} – {gymInfo?.eveningClose||'10:00 PM'}
+              </div>
+              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>{gymInfo?.days||'Monday – Saturday'}</div>
+            </div>
+            {/* Holiday/Closed */}
+            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(239,68,68,0.2)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
+              <div style={{fontSize:32,marginBottom:10}}>❌</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Closed</div>
+              <div style={{fontSize:'clamp(14px,2vw,17px)',fontWeight:700,color:'#ef4444',marginBottom:4}}>
+                {gymInfo?.holiday||'Sunday'}
+              </div>
+              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>Weekly off</div>
+            </div>
+          </div>
+          {/* Notice / Announcement */}
+          {gymInfo?.notice && (
+            <div style={{marginTop:24,padding:'16px 24px',borderRadius:14,background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.3)',display:'flex',alignItems:'center',gap:12,textAlign:'left'}}>
+              <span style={{fontSize:22,flexShrink:0}}>📢</span>
+              <p style={{color:'#fbbf24',fontSize:'clamp(13px,1.8vw,15px)',lineHeight:1.6,margin:0}}>{gymInfo.notice}</p>
+            </div>
+          )}
+        </div>
       </section>
     </>
   )
