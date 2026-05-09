@@ -91,7 +91,7 @@ export default function Footer() {
           {[
             '📍 Friends Fitness Club',
             '   RT Complex, 2nd Floor',
-            '   Wardhaman Nagar, Amravati Road',
+            '   Wardhaman, Amravati Road',
             '   Nagpur - 440023',
             '📞 +91 84848 05154',
             '✉️ friendsfitnessclub18@gmail.com',
