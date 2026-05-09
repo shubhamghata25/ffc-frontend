@@ -1558,8 +1558,37 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
   const [pwForm,setPwForm]=useState({current:'',next:'',confirm:''})
   const [pwMsg,setPwMsg]=useState(null)
   const [pwSaving,setPwSaving]=useState(false)
+  const [gymSaving,setGymSaving]=useState(false)
+  const [gymMsg,setGymMsg]=useState(null)
+  const [gymForm,setGymForm]=useState({
+    gymName:'Friends Fitness Club',
+    phone:'+91 84848 05154',
+    email:'friendsfitnessclub18@gmail.com',
+    address:'RT Complex, 2nd Floor, Wardhaman Nagar, Nagpur',
+    morningOpen:'5:00 AM',
+    morningClose:'11:00 AM',
+    eveningOpen:'4:30 PM',
+    eveningClose:'10:00 PM',
+    days:'Monday – Saturday',
+    holiday:'Closed on Sunday',
+  })
+  const setG = (k,v) => setGymForm(f=>({...f,[k]:v}))
 
-  const save=()=>{setSaved(true);setTimeout(()=>setSaved(false),2200)}
+  useEffect(()=>{
+    apiFetch('/api/admin/gym-info')
+      .then(data=>{ if(data&&Object.keys(data).length) setGymForm(f=>({...f,...data})) })
+      .catch(()=>{})
+  },[])
+
+  const saveGymInfo = async () => {
+    setGymSaving(true); setGymMsg(null)
+    try {
+      await apiFetch('/api/admin/gym-info','POST', gymForm)
+      setGymMsg({ok:true,msg:'Gym info saved successfully!'})
+    } catch(e) { setGymMsg({ok:false,msg:e.message||'Failed to save'}) }
+    setGymSaving(false)
+    setTimeout(()=>setGymMsg(null),4000)
+  }
 
   const syncSheets=async()=>{
     setSyncing(true); setSyncResult(null)
@@ -1591,19 +1620,23 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(270px,1fr))',gap:20}}>
         <Card style={{padding:26}}>
           <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:16}}>Gym Info</div>
-          <FR label="Gym Name"><input style={inp} defaultValue="Friends Fitness Club"/></FR>
-          <FR label="Phone"><input style={inp} defaultValue="+91 84848 05154"/></FR>
-          <FR label="Email"><input style={inp} defaultValue="friendsfitnessclub18@gmail.com"/></FR>
-          <FR label="Address"><input style={inp} defaultValue="RT Complex, 2nd Floor, Wardhaman Nagar, Nagpur"/></FR>
-          <Btn onClick={save}>{saved?'✓ Saved!':'Save Changes'}</Btn>
+          <FR label="Gym Name"><input style={inp} value={gymForm.gymName} onChange={e=>setG('gymName',e.target.value)}/></FR>
+          <FR label="Phone"><input style={inp} value={gymForm.phone} onChange={e=>setG('phone',e.target.value)}/></FR>
+          <FR label="Email"><input style={inp} value={gymForm.email} onChange={e=>setG('email',e.target.value)}/></FR>
+          <FR label="Address"><input style={inp} value={gymForm.address} onChange={e=>setG('address',e.target.value)}/></FR>
+          {gymMsg&&<div style={{marginBottom:10,padding:'8px 12px',borderRadius:8,background:gymMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:gymMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{gymMsg.ok?'✅':'❌'} {gymMsg.msg}</div>}
+          <Btn onClick={saveGymInfo} disabled={gymSaving}>{gymSaving?<Spinner/>:'Save Gym Info'}</Btn>
         </Card>
         <Card style={{padding:26}}>
           <div style={{fontWeight:700,fontSize:15,color:'#7c3aed',marginBottom:16}}>Timings</div>
-          <FR label="Opening"><input style={inp} defaultValue="5:00 AM"/></FR>
-          <FR label="Closing"><input style={inp} defaultValue="10:00 PM"/></FR>
-          <FR label="Days"><input style={inp} defaultValue="Monday – Saturday"/></FR>
-          <FR label="Holiday"><input style={inp} defaultValue="Closed on Sunday"/></FR>
-          <Btn onClick={save}>{saved?'✓ Saved!':'Save Timings'}</Btn>
+          <FR label="Days Open"><input style={inp} value={gymForm.days} onChange={e=>setG('days',e.target.value)}/></FR>
+          <FR label="Morning Open"><input style={inp} value={gymForm.morningOpen} onChange={e=>setG('morningOpen',e.target.value)} placeholder="5:00 AM"/></FR>
+          <FR label="Morning Close"><input style={inp} value={gymForm.morningClose} onChange={e=>setG('morningClose',e.target.value)} placeholder="11:00 AM"/></FR>
+          <FR label="Evening Open"><input style={inp} value={gymForm.eveningOpen} onChange={e=>setG('eveningOpen',e.target.value)} placeholder="4:30 PM"/></FR>
+          <FR label="Evening Close"><input style={inp} value={gymForm.eveningClose} onChange={e=>setG('eveningClose',e.target.value)} placeholder="10:00 PM"/></FR>
+          <FR label="Holiday"><input style={inp} value={gymForm.holiday} onChange={e=>setG('holiday',e.target.value)}/></FR>
+          {gymMsg&&<div style={{marginBottom:10,padding:'8px 12px',borderRadius:8,background:gymMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:gymMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{gymMsg.ok?'✅':'❌'} {gymMsg.msg}</div>}
+          <Btn onClick={saveGymInfo} disabled={gymSaving}>{gymSaving?<Spinner/>:'Save Timings'}</Btn>
         </Card>
         <Card style={{padding:26,border:'1px solid rgba(124,58,237,0.3)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#bb86fc',marginBottom:16}}>🔒 Change Password</div>

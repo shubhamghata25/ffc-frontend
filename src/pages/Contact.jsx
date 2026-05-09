@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -11,7 +11,7 @@ const COUNTRY_CODES = [
   { code:'+971',flag:'🇦🇪', label:'UAE'       },
 ]
 
-const INFO = [
+const DEFAULT_INFO = [
   { icon:'📍', title:'Address',  lines:['RT Complex, 2nd Floor,','Wardhaman Nagar, Nagpur'] },
   { icon:'📞', title:'Phone',    lines:['+91 84848 05154'] },
   { icon:'✉️', title:'Email',    lines:['friendsfitnessclub18@gmail.com'] },
@@ -21,7 +21,26 @@ const INFO = [
 export default function Contact() {
   const [form, setForm]     = useState({ name:'', email:'', phone:'', message:'', countryCode:'+91' })
   const [status, setStatus] = useState('idle')
+  const [INFO, setINFO]     = useState(DEFAULT_INFO)
   const { toasts, success, error } = useToast()
+
+  useEffect(()=>{
+    fetch(`${API}/api/gym-info`)
+      .then(r=>r.json())
+      .then(g=>{
+        setINFO([
+          { icon:'📍', title:'Address',  lines: g.address ? g.address.split(',').map(s=>s.trim()) : DEFAULT_INFO[0].lines },
+          { icon:'📞', title:'Phone',    lines: [g.phone || DEFAULT_INFO[1].lines[0]] },
+          { icon:'✉️', title:'Email',    lines: [g.email || DEFAULT_INFO[2].lines[0]] },
+          { icon:'🕐', title:'Timings',  lines: [
+            `${g.days||'Mon–Sat'}: Morning ${g.morningOpen||'5:00 AM'} – ${g.morningClose||'11:00 AM'}`,
+            `${g.days||'Mon–Sat'}: Evening ${g.eveningOpen||'4:30 PM'} – ${g.eveningClose||'10:00 PM'}`,
+            g.holiday || 'Sunday: Closed'
+          ]},
+        ])
+      })
+      .catch(()=>{})
+  },[])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]:v }))
 

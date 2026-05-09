@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 /* SVG Social Icons — no external icon library needed */
 const Icons = {
@@ -36,6 +38,22 @@ const SOCIAL = [
 ]
 
 export default function Footer() {
+  const [gym, setGym] = useState({
+    address: 'RT Complex, 2nd Floor, Wardhaman Nagar, Nagpur',
+    phone: '+91 84848 05154',
+    email: 'friendsfitnessclub18@gmail.com',
+    days: 'Mon–Sat',
+    morningOpen: '5:00 AM', morningClose: '11:00 AM',
+    eveningOpen: '4:30 PM', eveningClose: '10:00 PM',
+    holiday: 'Sunday: Closed',
+  })
+
+  useEffect(()=>{
+    fetch(`${API}/api/gym-info`)
+      .then(r=>r.json())
+      .then(g=>setGym(prev=>({...prev,...g})))
+      .catch(()=>{})
+  },[])
   return (
     <footer style={{
       background:'rgba(6,5,15,0.98)',
@@ -89,14 +107,12 @@ export default function Footer() {
         <div>
           <h4 style={{ color:'#bb86fc', marginBottom:16, fontSize:13, fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>Contact</h4>
           {[
-            '📍 Friends Fitness Club',
-            '   RT Complex, 2nd Floor',
-            '   Wardhaman, Amravati Road',
-            '   Nagpur - 440023',
-            '📞 +91 84848 05154',
-            '✉️ friendsfitnessclub18@gmail.com',
-            '🕐 Mon–Sat : 5:00 AM – 11:00 AM',
-            '🕐           4:30 PM – 10:00 PM',
+            `📍 ${gym.address}`,
+            `📞 ${gym.phone}`,
+            `✉️ ${gym.email}`,
+            `🕐 ${gym.days||'Mon–Sat'} Morning: ${gym.morningOpen} – ${gym.morningClose}`,
+            `🕐 ${gym.days||'Mon–Sat'} Evening: ${gym.eveningOpen} – ${gym.eveningClose}`,
+            `❌ ${gym.holiday}`,
           ].map((t,i) => <p key={i} style={{ color:'rgba(184,176,212,0.6)', fontSize:13, marginBottom:7, lineHeight:1.6 }}>{t}</p>)}
         </div>
 
