@@ -42,16 +42,18 @@ export default function Home() {
   const years   =useCounter(3,1000,countersVisible)
   const [tIdx,setTIdx]=useState(0)
   useEffect(()=>{ const t=setInterval(()=>setTIdx(i=>(i+1)%TESTIMONIALS.length),3400); return()=>clearInterval(t) },[])
+  useEffect(()=>{ if(posts.length>1){ const t=setInterval(()=>setPostIdx(i=>(i+1)%posts.length),4000); return()=>clearInterval(t) } },[posts])
   const [offer,setOffer]=useState(null)
   const [trainersList,setTrainersList]=useState([])
   const [reels,setReels]=useState([])
-  const [gymInfo,setGymInfo]=useState(null)
+  const [posts,setPosts]=useState([])
+  const [postIdx,setPostIdx]=useState(0)
   useEffect(()=>{
     const api=import.meta.env.VITE_API_URL; if(!api)return
     fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
     fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
     fetch(`${api}/api/reels`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setReels(d)}).catch(()=>{})
-    fetch(`${api}/api/gym-info`).then(r=>r.json()).then(d=>setGymInfo(d)).catch(()=>{})
+    fetch(`${api}/api/posts`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setPosts(d)}).catch(()=>{})
   },[])
 
   return (
@@ -337,51 +339,69 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── GYM INFO BANNER ─── */}
-      <section style={{padding:'clamp(48px,8vw,72px) 6%',background:'linear-gradient(135deg,#0d0b1a,#1a0a3e,#0d0b1a)',borderTop:'1px solid rgba(124,58,237,0.15)',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',top:-60,left:'50%',transform:'translateX(-50%)',width:'min(500px,90vw)',height:'min(500px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1) 0%,transparent 65%)',pointerEvents:'none'}}/>
-        <div style={{position:'relative',maxWidth:900,margin:'0 auto',textAlign:'center'}}>
-          <div className="accent-line"/>
-          <h2 className="section-title" style={{marginBottom:8}}>Gym <span>Timings</span></h2>
-          <p className="section-sub" style={{marginBottom:36,fontSize:'clamp(13px,1.8vw,15px)'}}>We're open 6 days a week — choose your preferred slot!</p>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:16,marginBottom: gymInfo?.notice ? 28 : 0}}>
-            {/* Morning Slot */}
-            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
-              <div style={{fontSize:32,marginBottom:10}}>🌅</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Morning</div>
-              <div style={{fontSize:'clamp(15px,2.5vw,20px)',fontWeight:700,color:'#bb86fc',marginBottom:4}}>
-                {gymInfo?.morningOpen||'5:00 AM'} – {gymInfo?.morningClose||'11:00 AM'}
+      {/* ─── DAILY POSTS / QUOTES ─── */}
+      {posts.length > 0 && (
+        <section style={{padding:'clamp(48px,8vw,80px) 6%',background:'linear-gradient(135deg,#0d0b1a,#1a0a3e,#0d0b1a)',borderTop:'1px solid rgba(124,58,237,0.15)',position:'relative',overflow:'hidden',textAlign:'center'}}>
+          <div style={{position:'absolute',top:-60,left:'50%',transform:'translateX(-50%)',width:'min(500px,90vw)',height:'min(500px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1) 0%,transparent 65%)',pointerEvents:'none'}}/>
+          <div style={{position:'relative',maxWidth:720,margin:'0 auto'}}>
+            <div className="accent-line"/>
+            <h2 className="section-title" style={{marginBottom:8}}>Daily <span>Motivation</span></h2>
+            <p className="section-sub" style={{marginBottom:36,fontSize:'clamp(13px,1.8vw,15px)'}}>Stay inspired every day with posts from our team.</p>
+
+            {/* Post Card */}
+            {(() => {
+              const p = posts[postIdx]
+              if (!p) return null
+              return (
+                <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.95),rgba(26,21,53,0.95))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:24,padding:'clamp(24px,5vw,44px) clamp(20px,5vw,48px)',backdropFilter:'blur(14px)',transition:'opacity .4s'}}>
+                  {/* Image if present */}
+                  {p.image && (
+                    <div style={{marginBottom:22,borderRadius:16,overflow:'hidden',maxHeight:320}}>
+                      <img src={p.image} alt={p.title||'Post'} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                    </div>
+                  )}
+                  {/* Emoji or category badge */}
+                  {p.emoji && <div style={{fontSize:36,marginBottom:12}}>{p.emoji}</div>}
+                  {p.category && (
+                    <span style={{fontSize:11,padding:'3px 12px',borderRadius:20,background:'rgba(124,58,237,0.15)',color:'#9c59f7',fontWeight:700,letterSpacing:1,textTransform:'uppercase',display:'inline-block',marginBottom:14}}>
+                      {p.category}
+                    </span>
+                  )}
+                  {/* Title */}
+                  {p.title && (
+                    <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(22px,4vw,36px)',letterSpacing:2,color:'#f0eeff',marginBottom:14,lineHeight:1.2}}>
+                      {p.title}
+                    </h3>
+                  )}
+                  {/* Body */}
+                  {p.body && (
+                    <p style={{fontSize:'clamp(14px,2vw,18px)',color:'rgba(184,176,212,0.9)',lineHeight:1.8,marginBottom:16,fontStyle:p.isQuote?'italic':'normal'}}>
+                      {p.isQuote ? `"${p.body}"` : p.body}
+                    </p>
+                  )}
+                  {/* Author for quotes */}
+                  {p.isQuote && p.author && (
+                    <p style={{color:'#9c59f7',fontWeight:700,fontSize:'clamp(12px,1.8vw,14px)'}}>— {p.author}</p>
+                  )}
+                  {/* Date */}
+                  <p style={{fontSize:11,color:'rgba(107,100,144,0.6)',marginTop:12}}>
+                    {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : ''}
+                  </p>
+                </div>
+              )
+            })()}
+
+            {/* Dot navigation */}
+            {posts.length > 1 && (
+              <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:20}}>
+                {posts.map((_,i)=>(
+                  <div key={i} onClick={()=>setPostIdx(i)} style={{width:i===postIdx?22:8,height:8,borderRadius:4,background:i===postIdx?'#7c3aed':'rgba(124,58,237,0.25)',cursor:'pointer',transition:'all .3s'}}/>
+                ))}
               </div>
-              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>{gymInfo?.days||'Monday – Saturday'}</div>
-            </div>
-            {/* Evening Slot */}
-            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
-              <div style={{fontSize:32,marginBottom:10}}>🌆</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Evening</div>
-              <div style={{fontSize:'clamp(15px,2.5vw,20px)',fontWeight:700,color:'#bb86fc',marginBottom:4}}>
-                {gymInfo?.eveningOpen||'4:30 PM'} – {gymInfo?.eveningClose||'10:00 PM'}
-              </div>
-              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>{gymInfo?.days||'Monday – Saturday'}</div>
-            </div>
-            {/* Holiday/Closed */}
-            <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.9),rgba(26,21,53,0.9))',border:'1px solid rgba(239,68,68,0.2)',borderRadius:20,padding:'clamp(20px,4vw,32px) 24px',backdropFilter:'blur(12px)'}}>
-              <div style={{fontSize:32,marginBottom:10}}>❌</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(18px,3vw,24px)',letterSpacing:2,color:'#f0eeff',marginBottom:6}}>Closed</div>
-              <div style={{fontSize:'clamp(14px,2vw,17px)',fontWeight:700,color:'#ef4444',marginBottom:4}}>
-                {gymInfo?.holiday||'Sunday'}
-              </div>
-              <div style={{fontSize:12,color:'rgba(184,176,212,0.6)'}}>Weekly off</div>
-            </div>
+            )}
           </div>
-          {/* Notice / Announcement */}
-          {gymInfo?.notice && (
-            <div style={{marginTop:24,padding:'16px 24px',borderRadius:14,background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.3)',display:'flex',alignItems:'center',gap:12,textAlign:'left'}}>
-              <span style={{fontSize:22,flexShrink:0}}>📢</span>
-              <p style={{color:'#fbbf24',fontSize:'clamp(13px,1.8vw,15px)',lineHeight:1.6,margin:0}}>{gymInfo.notice}</p>
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
     </>
   )
 }

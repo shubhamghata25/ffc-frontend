@@ -1801,6 +1801,170 @@ function Reels({ apiFetch, token, toast }) {
   )
 }
 
+const CATEGORIES = ['Motivation','Fitness Tip','Nutrition','Holiday Notice','Achievement','General']
+
+function Posts({ apiFetch, token, toast }) {
+  const [posts, setPosts]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal]   = useState(null) // null | 'add' | post object
+  const blank = { title:'', body:'', image:'', emoji:'💪', category:'Motivation', isQuote:false, author:'', active:true }
+  const [form, setForm]     = useState(blank)
+  const [saving, setSaving] = useState(false)
+  const set = (k,v) => setForm(f=>({...f,[k]:v}))
+
+  const load = async () => {
+    setLoading(true)
+    try { setPosts(await apiFetch('/api/admin/posts')) } catch{}
+    setLoading(false)
+  }
+  useEffect(()=>{ load() },[])
+
+  const save = async () => {
+    if (!form.body.trim() && !form.title.trim()) { toast('Title or body is required','error'); return }
+    setSaving(true)
+    try {
+      if (modal==='add') await apiFetch('/api/admin/posts','POST', form)
+      else await apiFetch(`/api/admin/posts/${modal.id||modal._uid}`,'PUT', form)
+      toast(modal==='add'?'Post added!':'Post updated!','success')
+      setModal(null); load()
+    } catch(e){ toast(e.message||'Failed','error') }
+    setSaving(false)
+  }
+
+  const del = async (id) => {
+    if (!confirm('Delete this post?')) return
+    try { await apiFetch(`/api/admin/posts/${id}`,'DELETE'); toast('Deleted','success'); load() }
+    catch(e){ toast(e.message||'Failed','error') }
+  }
+
+  const toggleActive = async (p) => {
+    try { await apiFetch(`/api/admin/posts/${p.id||p._uid}`,'PUT',{...p,active:!p.active}); load() }
+    catch{}
+  }
+
+  const handleImage = (e) => {
+    const file = e.target.files[0]; if(!file) return
+    const r = new FileReader()
+    r.onload = ev => set('image', ev.target.result)
+    r.readAsDataURL(file)
+  }
+
+  const catColor = c => ({
+    'Motivation':'#7c3aed','Fitness Tip':'#22c55e','Nutrition':'#f59e0b',
+    'Holiday Notice':'#ef4444','Achievement':'#3b82f6','General':'#6b7280'
+  }[c]||'#6b7280')
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:10}}>
+        <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,letterSpacing:2}}>DAILY POSTS & QUOTES</h2>
+        <Btn onClick={()=>{setForm(blank);setModal('add')}}>+ Add Post</Btn>
+      </div>
+      <p style={{fontSize:13,color:'#6b6490',marginBottom:20,lineHeight:1.7}}>
+        Add daily motivation quotes, fitness tips, holiday notices, or any post. Active posts rotate on the Home page.
+      </p>
+
+      {loading ? <div style={{textAlign:'center',padding:40}}><Spinner/></div> :
+        posts.length === 0 ? (
+          <Card style={{padding:40,textAlign:'center'}}>
+            <div style={{fontSize:40,marginBottom:12}}>💬</div>
+            <p style={{color:'#6b6490'}}>No posts yet. Add your first daily quote or post!</p>
+          </Card>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16}}>
+            {posts.map(p=>(
+              <Card key={p.id||p._uid} style={{padding:18,opacity:p.active?1:0.55}}>
+                {/* Header row */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,background:`${catColor(p.category)}22`,color:catColor(p.category),fontWeight:700}}>
+                    {p.emoji||''} {p.category||'General'}
+                  </span>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontSize:11,color:p.active?'#22c55e':'#6b6490'}}>{p.active?'Live':'Hidden'}</span>
+                    <button onClick={()=>toggleActive(p)} style={{width:36,height:20,borderRadius:10,border:'none',cursor:'pointer',background:p.active?'#22c55e':'rgba(124,58,237,0.2)',position:'relative',transition:'background .2s'}}>
+                      <span style={{position:'absolute',top:3,left:p.active?18:3,width:14,height:14,borderRadius:'50%',background:'#fff',transition:'left .2s'}}/>
+                    </button>
+                  </div>
+                </div>
+                {/* Image preview */}
+                {p.image && <img src={p.image} alt="" style={{width:'100%',borderRadius:10,maxHeight:120,objectFit:'cover',marginBottom:10}}/>}
+                {/* Quote badge */}
+                {p.isQuote && <span style={{fontSize:10,padding:'2px 8px',borderRadius:10,background:'rgba(251,191,36,0.1)',color:'#fbbf24',fontWeight:700,display:'inline-block',marginBottom:6}}>QUOTE</span>}
+                {p.title && <div style={{fontWeight:700,fontSize:14,color:'#f0eeff',marginBottom:4,lineHeight:1.4}}>{p.title}</div>}
+                {p.body && <div style={{fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.6,marginBottom:6,fontStyle:p.isQuote?'italic':'normal',display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>
+                  {p.isQuote?`"${p.body}"`:p.body}
+                </div>}
+                {p.isQuote&&p.author&&<div style={{fontSize:11,color:'#9c59f7',marginBottom:8}}>— {p.author}</div>}
+                <div style={{fontSize:11,color:'#6b6490',marginBottom:12}}>
+                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : ''}
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <Btn size="sm" variant="ghost" style={{flex:1,justifyContent:'center'}} onClick={()=>{setForm({title:p.title||'',body:p.body||'',image:p.image||'',emoji:p.emoji||'💪',category:p.category||'Motivation',isQuote:!!p.isQuote,author:p.author||'',active:p.active});setModal(p)}}>Edit</Btn>
+                  <Btn size="sm" variant="danger" style={{flex:1,justifyContent:'center'}} onClick={()=>del(p.id||p._uid)}>Delete</Btn>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      }
+
+      {/* Add / Edit Modal */}
+      {modal && (
+        <Modal title={modal==='add'?'Add Post / Quote':'Edit Post'} onClose={()=>setModal(null)}>
+          <FR label="Category">
+            <select style={inp} value={form.category} onChange={e=>set('category',e.target.value)}>
+              {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </FR>
+          <FR label="Emoji (optional)">
+            <input style={inp} value={form.emoji} onChange={e=>set('emoji',e.target.value)} placeholder="💪 🔥 🥗 🏆"/>
+          </FR>
+          <FR label="Title (optional)">
+            <input style={inp} value={form.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. No Pain No Gain"/>
+          </FR>
+          <FR label="Body / Quote Text *">
+            <textarea style={{...inp,minHeight:90,resize:'vertical'}} value={form.body} onChange={e=>set('body',e.target.value)} placeholder="Write your post content or quote here..."/>
+          </FR>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+            <input type="checkbox" id="isQuote" checked={form.isQuote} onChange={e=>set('isQuote',e.target.checked)} style={{width:16,height:16,accentColor:'#7c3aed',cursor:'pointer'}}/>
+            <label htmlFor="isQuote" style={{fontSize:13,color:'#f0eeff',cursor:'pointer'}}>This is a quote</label>
+          </div>
+          {form.isQuote && (
+            <FR label="Quote Author">
+              <input style={inp} value={form.author} onChange={e=>set('author',e.target.value)} placeholder="e.g. Arnold Schwarzenegger"/>
+            </FR>
+          )}
+          <FR label="Image (optional)">
+            {form.image ? (
+              <div style={{textAlign:'center'}}>
+                <img src={form.image} alt="" style={{width:'100%',borderRadius:10,maxHeight:140,objectFit:'cover',marginBottom:8}}/>
+                <button onClick={()=>set('image','')} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:12}}>✕ Remove Image</button>
+              </div>
+            ) : (
+              <label style={{display:'block',padding:'12px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7'}}>
+                📁 Upload Image
+                <input type="file" accept="image/*" onChange={handleImage} style={{display:'none'}}/>
+              </label>
+            )}
+          </FR>
+          <FR label="Status">
+            <select style={inp} value={form.active?'true':'false'} onChange={e=>set('active',e.target.value==='true')}>
+              <option value="true">Active (show on home page)</option>
+              <option value="false">Hidden</option>
+            </select>
+          </FR>
+          <div style={{display:'flex',gap:10,marginTop:4}}>
+            <Btn onClick={save} disabled={saving} style={{flex:2,justifyContent:'center'}}>
+              {saving?<Spinner/>:modal==='add'?'Add Post':'Save Changes'}
+            </Btn>
+            <Btn variant="muted" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
 const NAV_ALL = [
   {id:'dashboard',  icon:'⚡', label:'Dashboard',  adminOnly:false },
   {id:'members',    icon:'👥', label:'Members',    adminOnly:false },
@@ -1808,6 +1972,7 @@ const NAV_ALL = [
   {id:'offers',     icon:'🔥', label:'Offers',     adminOnly:false },
   {id:'leads',      icon:'📬', label:'Leads',      adminOnly:false },
   {id:'trainers',   icon:'🏋', label:'Trainers',  adminOnly:false },
+  {id:'posts',      icon:'💬', label:'Posts',      adminOnly:false },
   {id:'store',      icon:'🛒', label:'Store',      adminOnly:false },
   {id:'pricing',    icon:'💳', label:'Pricing',    adminOnly:false },
   {id:'exercises',  icon:'🏃', label:'Exercises',  adminOnly:false },
@@ -2580,6 +2745,7 @@ export default function AdminPage() {
     store:      <AdminStore     {...shared} isMainAdmin={isMainAdmin}/>,
     pricing:    <AdminPricing   {...shared} isMainAdmin={isMainAdmin}/>,
     exercises:  <AdminExercises {...shared} isMainAdmin={isMainAdmin}/>,
+    posts:      <Posts apiFetch={apiFetch} token={token} toast={showToast}/>,
     // Main-admin-only pages
     reels:      isMainAdmin ? <Reels apiFetch={apiFetch} token={token} toast={showToast}/> : <AccessDenied/>,
     revenue:    isMainAdmin ? <Revenue   {...{apiFetch,members,isMainAdmin}} toast={showToast}/> : <AccessDenied/>,
