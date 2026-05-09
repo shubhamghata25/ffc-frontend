@@ -49,7 +49,7 @@ export default function Home() {
   const [posts,setPosts]=useState([])
   const [postIdx,setPostIdx]=useState(0)
   useEffect(()=>{
-    const api=import.meta.env.VITE_API_URL; if(!api)return
+    const api = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
     fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
     fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
     fetch(`${api}/api/reels`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setReels(d)}).catch(()=>{})
