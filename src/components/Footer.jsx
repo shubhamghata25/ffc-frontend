@@ -90,10 +90,12 @@ export default function Footer() {
           <h4 style={{ color:'#bb86fc', marginBottom:16, fontSize:13, fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>Contact</h4>
           {[
             '📍 RT Complex, 2nd Floor',
-            '   Wardhaman Nagar, Nagpur',
+            '   Wardhaman Nagar, Amravati Road,',
+            ' Nagpur - 440023',
             '📞 +91 84848 05154',
             '✉️ friendsfitnessclub18@gmail.com',
-            '🕐 Mon–Sat: 5:00 AM – 10:00 PM',
+            '🕐 Mon–Sat: 5:00 AM - 11:00 AM', 
+            'and 4:30 PM - 10:00 PM',
           ].map((t,i) => <p key={i} style={{ color:'rgba(184,176,212,0.6)', fontSize:13, marginBottom:7, lineHeight:1.6 }}>{t}</p>)}
         </div>
 
