@@ -191,14 +191,14 @@ export default function Home() {
                   <div className="badge-purple" style={{marginBottom:12,fontSize:11,letterSpacing:2}}>LIMITED TIME OFFER</div>
                   <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,6vw,60px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                   <p style={{color:'rgba(240,238,255,0.82)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6,maxWidth:480}}>{offer.description}</p>
-                  <a href="/pricing#personal-trainers" className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn||'View Offer'}</a>
+                  <a href={offer.linkedPlanId ? `/pricing?offer=${offer.linkedPlanId}` : '/pricing'} className="btn" style={{fontSize:'clamp(13px,2vw,15px)'}}>{offer.btn||'View Offer'}</a>
                 </div>
               </div>
             : <div style={{background:'linear-gradient(135deg,#0d0b1a,#1a0a3e)',padding:'clamp(32px,6vw,52px) 8%',textAlign:'center'}}>
                 <div className="badge-purple" style={{marginBottom:12}}>LIMITED TIME OFFER</div>
                 <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(24px,5vw,52px)',letterSpacing:2,marginBottom:10}}>{offer.title}</h2>
                 <p style={{color:'rgba(240,238,255,0.8)',marginBottom:22,fontSize:'clamp(13px,2vw,16px)',lineHeight:1.6}}>{offer.description}</p>
-                <a href="/pricing#personal-trainers" className="btn">{offer.btn||'View Offer'}</a>
+                <a href={offer.linkedPlanId ? `/pricing?offer=${offer.linkedPlanId}` : '/pricing'} className="btn">{offer.btn||'View Offer'}</a>
               </div>
           }
         </section>
@@ -258,7 +258,7 @@ export default function Home() {
               <h4 style={{color:'#bb86fc',fontSize:'clamp(15px,2vw,18px)',marginBottom:4,fontWeight:700}}>{t.name}</h4>
               <p style={{color:'rgba(184,176,212,0.6)',fontSize:12,marginBottom:4}}>{t.role} · {t.exp}</p>
               <p style={{color:'rgba(184,176,212,0.45)',fontSize:12,marginBottom:16}}>{t.spec}</p>
-              <Link to={`/pricing?trainerId=${t.id||t._uid||''}`} className="btn btn-ghost" style={{fontSize:12,padding:'8px 18px',display:'block',textAlign:'center'}} onClick={()=>setTimeout(()=>{const el=document.getElementById('personal-trainers');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})},300)}>View PT Plan →</Link>
+              <Link to={`/pricing?trainerId=${t.id||t._uid||''}`} className="btn btn-ghost" style={{fontSize:12,padding:'8px 18px',display:'block',textAlign:'center'}}>View PT Plan →</Link>
             </div>
           ))}
         </div>

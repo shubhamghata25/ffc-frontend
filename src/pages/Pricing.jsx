@@ -344,21 +344,25 @@ export default function Pricing() {
   // If offer has linked plan, highlight it. trainerId param also highlights that trainer's plan.
   const linkedPlanId = offer?.linkedPlanId || null
 
-  // Scroll to PT section when: hash present, or trainerId param present, or offer links a PT plan
+  // Scroll to PT section when trainerId param is present
   useEffect(()=>{
     if(loading) return
-    const shouldScrollPT = window.location.hash==='#personal-trainers' || !!trainerIdParam
-    if(shouldScrollPT && ptRef.current){
-      setTimeout(()=>ptRef.current.scrollIntoView({behavior:'smooth',block:'start'}),200)
-    }
-  },[loading])
+    if(!trainerIdParam) return
+    const timer = setTimeout(()=>{
+      if(ptRef.current) ptRef.current.scrollIntoView({behavior:'smooth',block:'start'})
+    }, 300)
+    return () => clearTimeout(timer)
+  },[loading, trainerIdParam])
 
-  // Scroll to highlighted plan card (offer-linked or trainer-linked)
+  // Scroll to highlighted plan card (offer-linked)
   useEffect(()=>{
-    if(!loading && highlightRef.current){
-      setTimeout(()=>highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'}),450)
-    }
-  },[loading])
+    if(loading) return
+    if(!highlightId) return
+    const timer = setTimeout(()=>{
+      if(highlightRef.current) highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'})
+    }, 400)
+    return () => clearTimeout(timer)
+  },[loading, highlightId])
 
   const membershipPlans = plans.filter(p => !p.ptPlan)
   const ptPlans         = plans.filter(p => p.ptPlan)
@@ -394,7 +398,7 @@ export default function Pricing() {
           <>
             <div className="plan-grid plan-grid-inner" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,240px),1fr))',gap:'clamp(14px,2vw,24px)',maxWidth:1100,margin:'0 auto'}}>
               {membershipPlans.map(plan => {
-              const hl = !!(linkedPlanId && plan.id===linkedPlanId)
+              const hl = !!(highlightId && plan.id===highlightId)
               return <div key={plan.id} ref={hl?highlightRef:null}><PlanCard plan={plan} onSelect={setSelected} isHighlighted={hl}/></div>
             })}
               {membershipPlans.length===0 && <p style={{color:'var(--muted)',gridColumn:'1/-1',padding:40}}>No membership plans available.</p>}
@@ -440,9 +444,11 @@ export default function Pricing() {
             {ptPlans.map(plan => {
               const trainer = trainers.find(t => (t.id||t._uid) === plan.trainerId) || null
               // Highlight if: offer links this plan, OR user came from a specific trainer's "View PT Plan" button
+              const trainerMatch = trainerIdParam && plan.trainerId &&
+                (plan.trainerId === trainerIdParam ||
+                 String(plan.trainerId) === String(trainerIdParam))
               const hl = !!(
-                (linkedPlanId && plan.id===linkedPlanId) ||
-                (trainerIdParam && plan.trainerId === trainerIdParam)
+                (highlightId && plan.id === highlightId) || trainerMatch
               )
               return <div key={plan.id} ref={hl?highlightRef:null} style={{animation:hl?'pulseGlow 2s ease-in-out infinite':'none',borderRadius:'clamp(16px,2vw,24px)'}}><PTCard plan={plan} trainer={trainer} onSelect={setSelected} isHighlighted={hl}/></div>
             })}
