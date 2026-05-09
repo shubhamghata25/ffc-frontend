@@ -1,11 +1,5 @@
 import React, { useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
-
-function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
-  return null
-}
 import Navbar    from './components/Navbar.jsx'
 import Footer    from './components/Footer.jsx'
 import Home      from './pages/Home.jsx'
@@ -16,6 +10,12 @@ import Contact   from './pages/Contact.jsx'
 import Exercises from './pages/Exercises.jsx'
 import AdminPage from './pages/AdminPage.jsx'
 import KioskPage from './pages/KioskPage.jsx'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
 
 function Layout() {
   const { pathname } = useLocation()
