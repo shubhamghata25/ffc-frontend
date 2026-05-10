@@ -35,26 +35,29 @@ const FEATURES=[
   {icon:'📈',title:'Proven Results',desc:'200+ members transformed with our scientifically-backed programs.'},
 ]
 
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
+
 export default function Home() {
   const [countersRef,countersVisible]=useInView()
   const members =useCounter(200,1600,countersVisible)
   const trainers=useCounter(5,1000,countersVisible)
   const years   =useCounter(3,1000,countersVisible)
   const [tIdx,setTIdx]=useState(0)
+  const [postIdx,setPostIdx]=useState(0)
   useEffect(()=>{ const t=setInterval(()=>setTIdx(i=>(i+1)%TESTIMONIALS.length),3400); return()=>clearInterval(t) },[])
-  useEffect(()=>{ if(posts.length>1){ const t=setInterval(()=>setPostIdx(i=>(i+1)%posts.length),4000); return()=>clearInterval(t) } },[posts])
   const [offer,setOffer]=useState(null)
   const [trainersList,setTrainersList]=useState([])
   const [reels,setReels]=useState([])
   const [posts,setPosts]=useState([])
-  const [postIdx,setPostIdx]=useState(0)
+
   useEffect(()=>{
-    const api = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
-    fetch(`${api}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
-    fetch(`${api}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
-    fetch(`${api}/api/reels`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setReels(d)}).catch(()=>{})
-    fetch(`${api}/api/posts`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setPosts(d)}).catch(()=>{})
+    fetch(`${API}/api/offer`).then(r=>r.json()).then(d=>{if(d&&d.status==='ON')setOffer(d)}).catch(()=>{})
+    fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length>0)setTrainersList(d)}).catch(()=>{})
+    fetch(`${API}/api/reels`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setReels(d)}).catch(()=>{})
+    fetch(`${API}/api/posts`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setPosts(d)}).catch(()=>{})
   },[])
+
+  useEffect(()=>{ if(posts.length>1){ const t=setInterval(()=>setPostIdx(i=>(i+1)%posts.length),4000); return()=>clearInterval(t) } },[posts])
 
   return (
     <>
@@ -66,108 +69,57 @@ export default function Home() {
         .star{color:#f59e0b;font-size:14px}
         .feat-card{transition:transform .3s,box-shadow .3s}
         .feat-card:hover{transform:translateY(-8px);box-shadow:0 16px 48px rgba(124,58,237,0.25)!important}
-
-        /* ── Hero video: full cover on all devices ── */
         .hero-video{
-          position:absolute;
-          top:50%;
-          left:50%;
-          /* Centre then scale to cover — works on every browser */
+          position:absolute;top:50%;left:50%;
           transform:translate(-50%,-50%);
           -webkit-transform:translate(-50%,-50%);
-          /* At minimum fill the container in both axes */
-          min-width:100%;
-          min-height:100%;
-          /* Natural sizing — browser picks the axis that needs to grow */
-          width:auto;
-          height:auto;
-          object-fit:cover;
-          object-position:center center;
+          min-width:100%;min-height:100%;
+          width:auto;height:auto;
+          object-fit:cover;object-position:center center;
           z-index:1;
-          /* GPU layer — stops iOS Safari from compositing badly */
-          -webkit-backface-visibility:hidden;
-          backface-visibility:hidden;
-          will-change:transform;
+          -webkit-backface-visibility:hidden;backface-visibility:hidden;will-change:transform;
         }
-        /* iOS Safari @supports override — translate trick breaks there */
         @supports (-webkit-touch-callout:none){
-          .hero-video{
-            top:0; left:0;
-            width:100%;
-            height:100%;
-            min-width:unset; min-height:unset;
-            transform:none;
-            -webkit-transform:none;
-          }
+          .hero-video{top:0;left:0;width:100%;height:100%;min-width:unset;min-height:unset;transform:none;-webkit-transform:none;}
         }
-
-        /* ── Counter row: mobile ── */
-        @media(max-width:600px){
-          .counter-row{ gap:28px!important; }
-          .counter-num{ font-size:52px!important; }
-          .counter-label{ font-size:11px!important; }
-        }
-
-        /* ── Feature cards: single column on small screens ── */
-        @media(max-width:500px){
-          .feat-grid{ grid-template-columns:1fr!important; gap:14px!important; }
-        }
-
-        /* ── Testimonial: tighter padding on mobile ── */
-        @media(max-width:480px){
-          .testi-box{ padding:24px 18px!important; }
-          .testi-text{ font-size:15px!important; }
-        }
-
-        /* ── Hero text: prevent overflow on very small screens ── */
-        @media(max-width:360px){
-          .hero-tag{ font-size:10px!important; padding:5px 12px!important; letter-spacing:1!important; }
-          .hero-sub{ font-size:13px!important; }
-        }
+        @media(max-width:600px){.counter-row{gap:28px!important;}.counter-num{font-size:52px!important;}.counter-label{font-size:11px!important;}}
+        @media(max-width:500px){.feat-grid{grid-template-columns:1fr!important;gap:14px!important;}}
+        @media(max-width:480px){.testi-box{padding:24px 18px!important;}.testi-text{font-size:15px!important;}}
+        @media(max-width:360px){.hero-tag{font-size:10px!important;padding:5px 12px!important;letter-spacing:1!important;}.hero-sub{font-size:13px!important;}}
       `}</style>
 
-      {/* ─── HERO ─── */}
+      {/* HERO */}
       <section style={{position:'relative',height:'100vh',minHeight:'100svh',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-        {/* video — class hero-video fixes mobile sizing */}
         <video autoPlay muted loop playsInline className="hero-video" poster="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=1400&q=80">
           <source src="/gym-video.mp4" type="video/mp4"/>
         </video>
-
-        {/* overlay */}
         <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(6,5,15,0.88) 0%,rgba(44,16,101,0.78) 50%,rgba(6,5,15,0.88) 100%)',zIndex:2}}/>
-
-        {/* glow — smaller on mobile */}
         <div style={{position:'absolute',top:'15%',left:'50%',transform:'translateX(-50%)',width:'min(600px,90vw)',height:'min(600px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)',zIndex:2,pointerEvents:'none'}}/>
-
         <div className="fade-hero" style={{position:'relative',zIndex:3,textAlign:'center',padding:'0 20px',width:'100%',maxWidth:800}}>
           <div className="hero-tag" style={{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.35)',borderRadius:30,padding:'6px 16px',fontSize:11,fontWeight:700,letterSpacing:2,color:'#bb86fc',marginBottom:18,textTransform:'uppercase'}}>
             🏋 Nagpur's #1 Fitness Club — Est. 2023
           </div>
-
           <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(38px,9vw,100px)',letterSpacing:'clamp(2px,1vw,4px)',lineHeight:1.05,marginBottom:18,animation:'glow 3s ease-in-out infinite'}}>
             Push Harder<br/>
             <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
               Than Yesterday
             </span>
           </h1>
-
           <p className="hero-sub" style={{color:'rgba(240,238,255,0.75)',fontSize:'clamp(13px,2.2vw,17px)',lineHeight:1.7,maxWidth:500,margin:'0 auto 28px'}}>
             Transform your body with expert trainers, modern equipment &amp; personalised diet plans — all under one roof in Nagpur.
           </p>
-
           <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
             <Link to="/pricing" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 26px'}}>Join Now →</Link>
             <Link to="/about"   className="btn btn-ghost" style={{fontSize:'clamp(13px,2vw,15px)',padding:'11px 26px'}}>Learn More</Link>
           </div>
         </div>
-
         <div style={{position:'absolute',bottom:24,left:'50%',transform:'translateX(-50%)',zIndex:3,textAlign:'center'}}>
           <div style={{width:2,height:36,background:'linear-gradient(#7c3aed,transparent)',margin:'0 auto'}}/>
           <p style={{color:'rgba(107,100,144,0.8)',fontSize:9,marginTop:6,letterSpacing:3}}>SCROLL</p>
         </div>
       </section>
 
-      {/* ─── COUNTERS ─── */}
+      {/* COUNTERS */}
       <section ref={countersRef} style={{background:'rgba(13,11,26,0.95)',padding:'clamp(40px,8vw,72px) 8%',borderBottom:'1px solid rgba(124,58,237,0.12)',position:'relative'}}>
         <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 0%,rgba(124,58,237,0.1) 0%,transparent 60%)',pointerEvents:'none'}}/>
         <div className="counter-row" style={{display:'flex',justifyContent:'center',flexWrap:'wrap',gap:48,position:'relative'}}>
@@ -186,7 +138,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── OFFER BANNER ─── */}
+      {/* OFFER BANNER */}
       {offer && (
         <section style={{borderBottom:'1px solid rgba(124,58,237,0.2)',position:'relative',overflow:'hidden'}}>
           {offer.poster
@@ -210,7 +162,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* ─── WHY CHOOSE US ─── */}
+      {/* WHY CHOOSE US */}
       <section className="section" style={{background:'var(--bg)',textAlign:'center'}}>
         <div className="accent-line"/>
         <h2 className="section-title">Why Choose <span>Us</span></h2>
@@ -228,7 +180,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── INSTAGRAM REELS ─── */}
+      {/* INSTAGRAM REELS */}
       {reels.length > 0 && (
         <section style={{background:'rgba(6,5,15,0.98)',padding:'clamp(48px,8vw,80px) 0',borderTop:'1px solid rgba(124,58,237,0.1)',textAlign:'center',overflow:'hidden'}}>
           <div className="accent-line"/>
@@ -236,52 +188,59 @@ export default function Home() {
           <p className="section-sub" style={{margin:'0 auto 32px',fontSize:'clamp(13px,2vw,15px)',padding:'0 6%'}}>Follow us for daily workouts, transformations &amp; motivation.</p>
           <div style={{display:'flex',gap:16,overflowX:'auto',padding:'8px 6% 20px',scrollbarWidth:'none',WebkitOverflowScrolling:'touch',scrollSnapType:'x mandatory'}}>
             {reels.map(reel=>{
-              // Detect YouTube vs Instagram
               const isYT = reel.url.includes('youtube.com') || reel.url.includes('youtu.be')
               const ytId = isYT ? (reel.url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?/]+)/)||[])[1] : null
-              const igUrl = !isYT ? reel.url.replace('/p/','/p/').replace(/\/?$/,'/embed/') : null
               return (
-                <div key={reel._uid||reel.id} style={{flexShrink:0,width:'clamp(260px,72vw,320px)',scrollSnapAlign:'start',borderRadius:18,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'rgba(13,11,26,0.9)'}}>
-                  <div style={{position:'relative',width:'100%',paddingBottom: isYT ? '56.25%' : '125%',background:'#0d0b1a'}}>
-                    {isYT && ytId ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`}
-                        title={reel.caption||'Video'}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                        allowFullScreen
-                        style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}
-                      />
-                    ) : (
-                      <iframe
-                        src={igUrl}
-                        title={reel.caption||'Instagram'}
-                        frameBorder="0"
-                        scrolling="no"
-                        allowTransparency
-                        style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}}
-                      />
-                    )}
-                  </div>
-                  {reel.caption && (
-                    <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left'}}>
-                      {reel.caption}
+                <div key={reel._uid||reel.id} style={{flexShrink:0,width:'clamp(240px,70vw,300px)',scrollSnapAlign:'start',borderRadius:18,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'rgba(13,11,26,0.9)',cursor:'pointer'}}
+                  onClick={()=>window.open(reel.url,'_blank')}>
+                  {/* YouTube — embed works fine */}
+                  {isYT && ytId ? (
+                    <div style={{position:'relative',width:'100%',paddingBottom:'56.25%',background:'#0d0b1a'}}>
+                      <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`} title={reel.caption||'Video'} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowFullScreen style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}/>
+                    </div>
+                  ) : (
+                    /* Instagram — show thumbnail + play overlay, click opens Instagram */
+                    <div style={{position:'relative',width:'100%',paddingBottom:'125%',background:'linear-gradient(145deg,#1a0a3e,#0d0b1a)',overflow:'hidden'}}>
+                      {reel.thumbnail ? (
+                        <img src={reel.thumbnail} alt={reel.caption||'Reel'} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ) : (
+                        <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                            <circle cx="12" cy="12" r="4"/>
+                            <circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/>
+                          </svg>
+                          <span style={{color:'rgba(184,176,212,0.5)',fontSize:12}}>Instagram Reel</span>
+                        </div>
+                      )}
+                      {/* Play button overlay */}
+                      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.3)',transition:'background .2s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.5)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='rgba(0,0,0,0.3)'}>
+                        <div style={{width:56,height:56,borderRadius:'50%',background:'linear-gradient(135deg,#E1306C,#833AB4)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 20px rgba(225,48,108,0.5)'}}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                        </div>
+                      </div>
+                      {/* Instagram badge */}
+                      <div style={{position:'absolute',top:10,left:10,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.6)',borderRadius:20,padding:'4px 10px'}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
+                        <span style={{color:'#fff',fontSize:11,fontWeight:600}}>Instagram</span>
+                      </div>
                     </div>
                   )}
+                  {reel.caption && <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left'}}>{reel.caption}</div>}
                 </div>
               )
             })}
           </div>
           <a href="https://www.instagram.com/friends_fitness.club" target="_blank" rel="noreferrer"
-            style={{display:'inline-flex',alignItems:'center',gap:8,marginTop:8,padding:'10px 28px',borderRadius:50,border:'1px solid rgba(225,48,108,0.4)',color:'#E1306C',fontSize:14,fontWeight:600,textDecoration:'none',transition:'all .25s'}}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(225,48,108,0.1)';e.currentTarget.style.borderColor='#E1306C'}}
-            onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor='rgba(225,48,108,0.4)'}}>
+            style={{display:'inline-flex',alignItems:'center',gap:8,marginTop:8,padding:'10px 28px',borderRadius:50,border:'1px solid rgba(225,48,108,0.4)',color:'#E1306C',fontSize:14,fontWeight:600,textDecoration:'none'}}>
             📸 Follow on Instagram
           </a>
         </section>
       )}
 
-      {/* ─── TESTIMONIALS ─── */}
+      {/* TESTIMONIALS */}
       <section style={{background:'rgba(13,11,26,0.8)',padding:'clamp(48px,8vw,80px) 6%',textAlign:'center',borderTop:'1px solid rgba(124,58,237,0.1)'}}>
         <div className="accent-line"/>
         <h2 className="section-title" style={{marginBottom:30}}>Member <span>Stories</span></h2>
@@ -297,7 +256,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── PERSONAL TRAINERS ─── */}
+      {/* PERSONAL TRAINERS */}
       <section style={{background:'rgba(13,11,26,0.95)',padding:'clamp(48px,8vw,80px) 6%',borderTop:'1px solid rgba(124,58,237,0.1)',textAlign:'center'}}>
         <div className="accent-line" style={{margin:'0 auto 16px'}}/>
         <h2 className="section-title" style={{marginBottom:10}}>Our Personal <span style={{background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Trainers</span></h2>
@@ -321,12 +280,10 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
-          <Link to="/pricing?section=pt" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'12px 32px'}}>View All Trainer Plans →</Link>
-        </div>
+        <Link to="/pricing?section=pt" className="btn" style={{fontSize:'clamp(13px,2vw,15px)',padding:'12px 32px'}}>View All Trainer Plans →</Link>
       </section>
 
-      {/* ─── SHOP PREVIEW ─── */}
+      {/* SHOP PREVIEW */}
       <section className="section" style={{background:'var(--bg)',textAlign:'center'}}>
         <div className="accent-line"/>
         <h2 className="section-title">Shop Our <span>Products</span></h2>
@@ -339,7 +296,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── DAILY POSTS / QUOTES ─── */}
+      {/* DAILY POSTS / QUOTES */}
       {posts.length > 0 && (
         <section style={{padding:'clamp(48px,8vw,80px) 6%',background:'linear-gradient(135deg,#0d0b1a,#1a0a3e,#0d0b1a)',borderTop:'1px solid rgba(124,58,237,0.15)',position:'relative',overflow:'hidden',textAlign:'center'}}>
           <div style={{position:'absolute',top:-60,left:'50%',transform:'translateX(-50%)',width:'min(500px,90vw)',height:'min(500px,90vw)',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1) 0%,transparent 65%)',pointerEvents:'none'}}/>
@@ -347,56 +304,23 @@ export default function Home() {
             <div className="accent-line"/>
             <h2 className="section-title" style={{marginBottom:8}}>Daily <span>Motivation</span></h2>
             <p className="section-sub" style={{marginBottom:36,fontSize:'clamp(13px,1.8vw,15px)'}}>Stay inspired every day with posts from our team.</p>
-
-            {/* Post Card */}
-            {(() => {
-              const p = posts[postIdx]
-              if (!p) return null
+            {(()=>{
+              const p=posts[postIdx]; if(!p) return null
               return (
-                <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.95),rgba(26,21,53,0.95))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:24,padding:'clamp(24px,5vw,44px) clamp(20px,5vw,48px)',backdropFilter:'blur(14px)',transition:'opacity .4s'}}>
-                  {/* Image if present */}
-                  {p.image && (
-                    <div style={{marginBottom:22,borderRadius:16,overflow:'hidden',maxHeight:320}}>
-                      <img src={p.image} alt={p.title||'Post'} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
-                    </div>
-                  )}
-                  {/* Emoji or category badge */}
+                <div style={{background:'linear-gradient(145deg,rgba(19,15,36,0.95),rgba(26,21,53,0.95))',border:'1px solid rgba(124,58,237,0.25)',borderRadius:24,padding:'clamp(24px,5vw,44px) clamp(20px,5vw,48px)',backdropFilter:'blur(14px)'}}>
+                  {p.image && <div style={{marginBottom:22,borderRadius:16,overflow:'hidden',maxHeight:320}}><img src={p.image} alt={p.title||'Post'} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
                   {p.emoji && <div style={{fontSize:36,marginBottom:12}}>{p.emoji}</div>}
-                  {p.category && (
-                    <span style={{fontSize:11,padding:'3px 12px',borderRadius:20,background:'rgba(124,58,237,0.15)',color:'#9c59f7',fontWeight:700,letterSpacing:1,textTransform:'uppercase',display:'inline-block',marginBottom:14}}>
-                      {p.category}
-                    </span>
-                  )}
-                  {/* Title */}
-                  {p.title && (
-                    <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(22px,4vw,36px)',letterSpacing:2,color:'#f0eeff',marginBottom:14,lineHeight:1.2}}>
-                      {p.title}
-                    </h3>
-                  )}
-                  {/* Body */}
-                  {p.body && (
-                    <p style={{fontSize:'clamp(14px,2vw,18px)',color:'rgba(184,176,212,0.9)',lineHeight:1.8,marginBottom:16,fontStyle:p.isQuote?'italic':'normal'}}>
-                      {p.isQuote ? `"${p.body}"` : p.body}
-                    </p>
-                  )}
-                  {/* Author for quotes */}
-                  {p.isQuote && p.author && (
-                    <p style={{color:'#9c59f7',fontWeight:700,fontSize:'clamp(12px,1.8vw,14px)'}}>— {p.author}</p>
-                  )}
-                  {/* Date */}
-                  <p style={{fontSize:11,color:'rgba(107,100,144,0.6)',marginTop:12}}>
-                    {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : ''}
-                  </p>
+                  {p.category && <span style={{fontSize:11,padding:'3px 12px',borderRadius:20,background:'rgba(124,58,237,0.15)',color:'#9c59f7',fontWeight:700,letterSpacing:1,textTransform:'uppercase',display:'inline-block',marginBottom:14}}>{p.category}</span>}
+                  {p.title && <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'clamp(22px,4vw,36px)',letterSpacing:2,color:'#f0eeff',marginBottom:14,lineHeight:1.2}}>{p.title}</h3>}
+                  {p.body && <p style={{fontSize:'clamp(14px,2vw,18px)',color:'rgba(184,176,212,0.9)',lineHeight:1.8,marginBottom:16,fontStyle:p.isQuote?'italic':'normal'}}>{p.isQuote?`"${p.body}"`:p.body}</p>}
+                  {p.isQuote&&p.author&&<p style={{color:'#9c59f7',fontWeight:700,fontSize:'clamp(12px,1.8vw,14px)'}}>— {p.author}</p>}
+                  <p style={{fontSize:11,color:'rgba(107,100,144,0.6)',marginTop:12}}>{p.createdAt?new Date(p.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):''}</p>
                 </div>
               )
             })()}
-
-            {/* Dot navigation */}
-            {posts.length > 1 && (
+            {posts.length>1&&(
               <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:20}}>
-                {posts.map((_,i)=>(
-                  <div key={i} onClick={()=>setPostIdx(i)} style={{width:i===postIdx?22:8,height:8,borderRadius:4,background:i===postIdx?'#7c3aed':'rgba(124,58,237,0.25)',cursor:'pointer',transition:'all .3s'}}/>
-                ))}
+                {posts.map((_,i)=>(<div key={i} onClick={()=>setPostIdx(i)} style={{width:i===postIdx?22:8,height:8,borderRadius:4,background:i===postIdx?'#7c3aed':'rgba(124,58,237,0.25)',cursor:'pointer',transition:'all .3s'}}/>))}
               </div>
             )}
           </div>
