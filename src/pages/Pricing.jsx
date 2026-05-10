@@ -6,9 +6,7 @@ const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.c
 
 /* ─── Payment method modal ─── */
 function PayModal({ plan, onClose, onDone }) {
-  const [step, setStep]   = useState('details')   // 'details' | 'date' | 'method'
-  const todayStr = new Date().toISOString().slice(0,10)
-  const [joiningDate, setJoiningDate] = useState(todayStr)
+  const [step, setStep]   = useState('details')   // 'details' | 'method'
   const [paying, setPaying] = useState(false)
   const [form, setForm]   = useState({ name:'', email:'', phone:'', address:'', aadhaar:'' })
   const [aadhaarPreview, setAadhaarPreview] = useState(null)
@@ -72,7 +70,6 @@ function PayModal({ plan, onClose, onDone }) {
         memberName:form.name, memberEmail:form.email, memberPhone:form.phone,
         memberAddress:form.address, aadhaarPhoto:form.aadhaar||'',
         planLabel:plan.label, planPeriod:plan.period, planPrice:plan.price,
-        joiningDate,
       },
       onSuccess: () => {
         success('Payment successful! Check your email for confirmation and QR code.')
@@ -110,7 +107,7 @@ function PayModal({ plan, onClose, onDone }) {
           {/* Plan summary */}
           <div style={{ textAlign:'center',marginBottom:20 }}>
             <div style={{ fontSize:11,color:'#9c59f7',fontWeight:700,letterSpacing:2,marginBottom:6,textTransform:'uppercase' }}>
-              {step==='details' ? 'Step 1 of 3 — Your Details' : step==='date' ? 'Step 2 of 3 — Joining Date' : 'Step 3 of 3 — Payment'}
+              {step==='details' ? 'Step 1 of 2 — Your Details' : 'Step 2 of 2 — Payment'}
             </div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:26,letterSpacing:1 }}>{plan.label} Membership</div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:44,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1 }}>
@@ -178,57 +175,19 @@ function PayModal({ plan, onClose, onDone }) {
                   </div>
                 )}
               </div>
-              <button onClick={() => setStep('date')} disabled={!valid}
+              <button onClick={() => setStep('method')} disabled={!valid}
                 style={{ padding:'14px',border:'none',borderRadius:40,background:valid?'linear-gradient(135deg,#7c3aed,#9c59f7)':'rgba(124,58,237,0.2)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:valid?'pointer':'not-allowed',marginTop:4 }}>
-                Continue →
+                Continue to Payment →
               </button>
               {!valid && <p style={{ textAlign:'center',fontSize:11,color:'#6b6490' }}>Name, phone number and address are required</p>}
             </div>
           )}
 
-          {/* STEP 2: Joining Date */}
-          {step === 'date' && (
-            <div style={{ display:'flex',flexDirection:'column',gap:18 }}>
-              <div style={{ background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'16px 18px' }}>
-                <div style={{ fontSize:13,fontWeight:700,color:'#bb86fc',marginBottom:6 }}>📅 When do you want to start?</div>
-                <p style={{ fontSize:12,color:'#6b6490',margin:'0 0 14px',lineHeight:1.6 }}>
-                  Choose your membership joining date. Your plan validity will start from this date.
-                </p>
-                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:6 }}>Joining Date *</label>
-                <input
-                  type="date"
-                  value={joiningDate}
-                  min={todayStr}
-                  onChange={e=>setJoiningDate(e.target.value)}
-                  style={{ width:'100%',padding:'12px 14px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(124,58,237,0.4)',borderRadius:10,color:'#f0eeff',fontFamily:"'Poppins',sans-serif",fontSize:15,outline:'none',boxSizing:'border-box' }}
-                />
-                {joiningDate > todayStr && (
-                  <div style={{ marginTop:10,padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:8,fontSize:12,color:'#fbbf24' }}>
-                    ⚠️ Future date selected — your membership and QR will activate on {joiningDate}
-                  </div>
-                )}
-                {joiningDate === todayStr && (
-                  <div style={{ marginTop:10,padding:'8px 12px',background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,fontSize:12,color:'#4ade80' }}>
-                    ✅ Membership starts today
-                  </div>
-                )}
-              </div>
-              <button onClick={()=>setStep('method')}
-                style={{ padding:'14px',border:'none',borderRadius:40,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer' }}>
-                Continue to Payment →
-              </button>
-              <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
-                ← Edit details
-              </button>
-            </div>
-          )}
-
-          {/* STEP 3: Payment methods */}
+          {/* STEP 2: Payment methods */}
           {step === 'method' && (
             <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
               <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#4ade80',marginBottom:4 }}>
-                <div>Paying as: <strong>{form.name}</strong> · {form.phone}</div>
-                <div style={{marginTop:4,color:'#60a5fa'}}>📅 Joining: <strong>{joiningDate}</strong></div>
+                Paying as: <strong>{form.name}</strong> · {form.phone}
               </div>
 
               <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
@@ -249,8 +208,8 @@ function PayModal({ plan, onClose, onDone }) {
                 <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
               </button>
 
-              <button onClick={()=>setStep('date')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
-                ← Change joining date
+              <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
+                ← Edit details
               </button>
             </div>
           )}
@@ -446,8 +405,9 @@ export default function Pricing() {
 
   // Read URL params: ?offer=xxx highlights by plan ID, ?trainerId=xxx highlights by trainer ID
   const searchParams  = new URLSearchParams(window.location.search)
-  const highlightId   = searchParams.get('offer')
-  const trainerIdParam = searchParams.get('trainerId')  // from "View PT Plan" buttons
+  const highlightId    = searchParams.get('offer')
+  const planIdParam    = searchParams.get('planId')     // from "View PT Plan" buttons — specific plan ID
+  const trainerIdParam = searchParams.get('trainerId')  // from "View PT Plan" buttons — trainer ID
   const sectionParam   = searchParams.get('section')    // 'pt' → scroll to PT section
 
   const loadPlans = () => {
@@ -465,7 +425,7 @@ export default function Pricing() {
   // Scroll to PT section when trainerId param or section=pt is present
   useEffect(()=>{
     if(loading) return
-    if(!trainerIdParam && sectionParam !== 'pt') return
+    if(!trainerIdParam && !planIdParam && sectionParam !== 'pt') return
     const timer = setTimeout(()=>{
       if(ptRef.current) ptRef.current.scrollIntoView({behavior:'smooth',block:'start'})
     }, 300)
@@ -562,11 +522,13 @@ export default function Pricing() {
             {ptPlans.map(plan => {
               const trainer = trainers.find(t => (t.id||t._uid) === plan.trainerId) || null
               // Highlight if: offer links this plan, OR user came from a specific trainer's "View PT Plan" button
+              // Match by specific planId (from "View PT Plan" button) OR trainerId
+              const planMatch    = planIdParam && (plan.id === planIdParam || plan._uid === planIdParam)
               const trainerMatch = trainerIdParam && plan.trainerId &&
                 (plan.trainerId === trainerIdParam ||
                  String(plan.trainerId) === String(trainerIdParam))
               const hl = !!(
-                (highlightId && plan.id === highlightId) || trainerMatch
+                (highlightId && plan.id === highlightId) || planMatch || trainerMatch
               )
               return <div key={plan.id} ref={hl?highlightRef:null} style={{animation:hl?'pulseGlow 2s ease-in-out infinite':'none',borderRadius:'clamp(16px,2vw,24px)'}}><PTCard plan={plan} trainer={trainer} onSelect={setSelected} isHighlighted={hl}/></div>
             })}

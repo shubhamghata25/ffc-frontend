@@ -19,13 +19,13 @@ const uid   = () => Math.random().toString(36).slice(2,9)
 
 // Map plan period string → number of days
 const periodToDays = (period='') => {
-  const p = period.toLowerCase().trim()
+  const p = period.toLowerCase()
   if (p.includes('year'))    return 365
-  if (p.includes('half') || p==='6 months' || p==='6month' || p==='6months') return 182
-  if (p==='3 months' || p.includes('quarter') || p==='3month' || p==='3months') return 91
-  if (p==='month' || p==='monthly' || p==='1 month') return 30
-  if (p==='week' || p==='1 week') return 7
-  if (p==='day'  || p==='1 day')  return 1
+  if (p.includes('half') || p==='6month' || p==='6months') return 182
+  if (p.includes('quarter') || p==='3month') return 91
+  if (p==='month' || p==='monthly') return 30
+  if (p==='week')  return 7
+  if (p==='day')   return 1
   // fallback: try parsing a number from string
   const n = parseInt(p)
   return isNaN(n) ? 30 : n
@@ -816,7 +816,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
   // Plan period → days map for auto end-date calculation
   const PERIOD_DAYS = { 'Monthly':30, 'Quarterly':91, 'Half Yearly':182, 'Yearly':365 }
 
-  const blank = { name:'', phone:'', email:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'', aadhaarPhoto:'' }
+  const blank = { name:'', phone:'', email:'', address:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'', aadhaarPhoto:'' }
   const [form, setForm] = useState(blank)
   const set = (k, v) => {
     setForm(f => {
@@ -926,7 +926,9 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
                 <div><span style={{color:'#6b6490'}}>Plan: </span><span>{m.plan.split('–')[0].trim()}</span></div>
                 <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
-                <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>{m.ptPlan&&<div style={{fontSize:11,color:'#7c3aed',marginTop:2}}>🏋 PT · {m.scanDays||0} scan days · Access: {m.accessEndDate||'—'}</div>}
+                <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>
+                {m.ptPlan&&<div style={{fontSize:11,color:'#7c3aed',marginTop:2,gridColumn:'1/-1'}}>🏋 PT · {m.scanDays||0} scan days · Access: {m.accessEndDate||'—'}</div>}
+                {m.address&&<div style={{fontSize:12,color:'#6b6490',gridColumn:'1/-1',marginTop:2}}><span style={{color:'#4b4570'}}>📍 </span>{m.address}</div>}
               </div>
               <div style={{display:'flex',gap:8}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
@@ -953,6 +955,9 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
           <FR label="Email (optional — for QR email delivery)">
             <input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} placeholder="member@email.com" type="email"/>
           </FR>
+          <FR label="Address">
+            <input style={inp} value={form.address||''} onChange={e=>set('address',e.target.value)} placeholder="House No, Street, Area, City"/>
+          </FR>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
             <FR label="Plan">
               <select style={inp} value={form.plan} onChange={e=>{
@@ -964,20 +969,19 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   const end = new Date(form.joined)
                   end.setDate(end.getDate() + days)
                   set('endDate', end.toISOString().slice(0,10))
-                  // PT plan: always 30 scan days, 3-month QR window
-                  if (form.ptPlan || sel.ptPlan) {
+                  // If PT plan is checked, also update accessEndDate
+                  if (form.ptPlan) {
                     const access = new Date(form.joined)
-                    access.setMonth(access.getMonth() + 3)
+                    access.setDate(access.getDate() + days * 3)
                     set('accessEndDate', access.toISOString().slice(0,10))
-                    set('scanDays', 30)
-                    set('ptPlan', true)
+                    set('scanDays', days)
                   }
                 }
               }}>
                 <option value="">— Select Plan —</option>
                 {plans.length > 0
                   ? plans.filter(p=>p.active!==false).map(p=>(
-                      <option key={p.id} value={p.label}>{p.label}{p.ptPlan ? ' 🏋 PT' : ''} – ₹{p.effectivePrice||p.price}</option>
+                      <option key={p.id} value={p.label}>{p.label} – ₹{p.effectivePrice||p.price}</option>
                     ))
                   : ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999'].map(p=><option key={p}>{p}</option>)
                 }
@@ -993,12 +997,11 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   const end = new Date(newDate)
                   end.setDate(end.getDate() + days)
                   set('endDate', end.toISOString().slice(0,10))
-                  // PT plan: always 30 scan days, 3-month QR window
-                  if (form.ptPlan || sel.ptPlan) {
+                  if (form.ptPlan) {
                     const access = new Date(newDate)
-                    access.setMonth(access.getMonth() + 3)
+                    access.setDate(access.getDate() + days * 3)
                     set('accessEndDate', access.toISOString().slice(0,10))
-                    set('scanDays', 30)
+                    set('scanDays', days)
                   }
                 }
               }}/>
@@ -1014,28 +1017,29 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
               <input type="checkbox" checked={!!form.ptPlan} onChange={e=>{
                 set('ptPlan', e.target.checked)
                 if (e.target.checked && form.joined) {
-                  // PT plan: 30 scan days, QR valid for 3 months from join date
+                  const sel = plans.find(p=>p.label===form.plan)
+                  const days = sel ? periodToDays(sel.period) : (form.endDate ? Math.round((new Date(form.endDate)-new Date(form.joined))/86400000) : 30)
                   const access = new Date(form.joined)
-                  access.setMonth(access.getMonth() + 3)
+                  access.setDate(access.getDate() + days * 3)
                   set('accessEndDate', access.toISOString().slice(0,10))
-                  set('scanDays', 30)
+                  set('scanDays', days)
                 } else {
                   set('accessEndDate', '')
                   set('scanDays', 0)
                 }
               }} style={{width:16,height:16,accentColor:'#7c3aed'}}/>
               <span style={{fontWeight:600,fontSize:13,color:'#bb86fc'}}>🏋 Personal Trainer (PT) Plan</span>
-              <span style={{fontSize:11,color:'#6b6490'}}>30 scan days · QR valid 3 months</span>
+              <span style={{fontSize:11,color:'#6b6490'}}>QR scan days limited + 2× access window</span>
             </label>
             {form.ptPlan && (
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <FR label="QR Scan Days Allowed">
+                <FR label="Total QR Scan Days">
                   <input style={inp} type="number" value={form.scanDays||''} onChange={e=>set('scanDays',parseInt(e.target.value)||0)} placeholder="e.g. 30"/>
-                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Distinct gym days member can attend (default 30)</div>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Actual paid gym days</div>
                 </FR>
-                <FR label="QR Access Window End Date">
+                <FR label="Physical Access Window End">
                   <input style={{...inp,color:'#22c55e'}} type="date" value={form.accessEndDate||''} onChange={e=>set('accessEndDate',e.target.value)}/>
-                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>QR stops working after this date (default: join + 3 months)</div>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Last day member can enter gym</div>
                 </FR>
               </div>
             )}
@@ -1455,7 +1459,7 @@ function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, 
             {t.bio&&<div style={{fontSize:12,color:'#6b6490',marginBottom:16,lineHeight:1.6}}>{t.bio}</div>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 {t.ptEnabled&&t.ptPlanId&&(
-                  <a href={`/pricing#personal-trainers`} target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                  <a href={`/pricing?section=pt&planId=${t.ptPlanId}&trainerId=${t.id||t._uid}`} target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
                     <Btn size="sm" variant="primary">🏋 View PT Plan</Btn>
                   </a>
                 )}
@@ -1561,9 +1565,6 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
   const [pwSaving,setPwSaving]=useState(false)
   const [gymSaving,setGymSaving]=useState(false)
   const [gymMsg,setGymMsg]=useState(null)
-  const [logoPreview,setLogoPreview]=useState('')
-  const [logoSaving,setLogoSaving]=useState(false)
-  const [logoMsg,setLogoMsg]=useState(null)
   const [gymForm,setGymForm]=useState({
     gymName:'Friends Fitness Club',
     phone:'+91 84848 05154',
@@ -1583,40 +1584,7 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
     apiFetch('/api/admin/gym-info')
       .then(data=>{ if(data&&Object.keys(data).length) setGymForm(f=>({...f,...data})) })
       .catch(()=>{})
-    // load existing logo
-    fetch((typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com') : 'https://ffc-backend-50cu.onrender.com') + '/api/gym-logo')
-      .then(r=>r.json()).then(d=>{ if(d.logo) setLogoPreview(d.logo) }).catch(()=>{})
   },[])
-
-  const saveLogo = async () => {
-    setLogoSaving(true); setLogoMsg(null)
-    try {
-      await apiFetch('/api/admin/gym-logo','POST',{ logo: logoPreview })
-      setLogoMsg({ok:true,msg:'Logo saved! It will appear in the navbar immediately.'})
-    } catch(e) { setLogoMsg({ok:false,msg:e.message||'Failed to save logo'}) }
-    setLogoSaving(false)
-    setTimeout(()=>setLogoMsg(null),4000)
-  }
-
-  const removeLogo = async () => {
-    setLogoSaving(true)
-    try {
-      await apiFetch('/api/admin/gym-logo','POST',{ logo:'' })
-      setLogoPreview('')
-      setLogoMsg({ok:true,msg:'Logo removed. Navbar will show text name.'})
-    } catch(e) { setLogoMsg({ok:false,msg:'Failed to remove logo'}) }
-    setLogoSaving(false)
-    setTimeout(()=>setLogoMsg(null),3000)
-  }
-
-  function handleLogoUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) { setLogoMsg({ok:false,msg:'Image must be under 2MB'}); return }
-    const reader = new FileReader()
-    reader.onload = ev => setLogoPreview(ev.target.result)
-    reader.readAsDataURL(file)
-  }
 
   const saveGymInfo = async () => {
     setGymSaving(true); setGymMsg(null)
@@ -1700,36 +1668,6 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
           </p>
           <div style={{marginTop:12,fontSize:12,color:'#7c3aed',fontWeight:600}}>Manage Sub-Admins →</div>
         </Card>}
-        {/* ── Gym Logo ── */}
-        <Card style={{padding:26,border:'1px solid rgba(124,58,237,0.3)'}}>
-          <div style={{fontWeight:700,fontSize:15,color:'#bb86fc',marginBottom:4}}>🏋 Gym Logo</div>
-          <p style={{fontSize:12,color:'#6b6490',marginBottom:14,lineHeight:1.6}}>Upload your gym logo. It appears in the navbar across the whole website. PNG/JPG, under 2MB. Transparent PNG works best.</p>
-
-          {/* Preview */}
-          <div style={{minHeight:80,border:'1px dashed rgba(124,58,237,0.35)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:14,background:'rgba(255,255,255,0.02)',padding:12}}>
-            {logoPreview
-              ? <img src={logoPreview} alt="Logo preview" style={{maxHeight:80,maxWidth:'100%',objectFit:'contain',borderRadius:6}}/>
-              : <span style={{fontSize:12,color:'#4b4570'}}>No logo uploaded — navbar shows text</span>
-            }
-          </div>
-
-          <label style={{display:'block',padding:'10px',border:'1px dashed rgba(124,58,237,0.4)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7',marginBottom:12}}>
-            📁 Upload Logo Image (PNG / JPG)
-            <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={handleLogoUpload} style={{display:'none'}}/>
-          </label>
-
-          {logoMsg&&<div style={{marginBottom:10,padding:'8px 12px',borderRadius:8,background:logoMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:logoMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{logoMsg.ok?'✅':'❌'} {logoMsg.msg}</div>}
-
-          <div style={{display:'flex',gap:10}}>
-            <Btn onClick={saveLogo} disabled={logoSaving||!logoPreview} style={{flex:1,justifyContent:'center'}}>
-              {logoSaving?<Spinner/>:'Save Logo'}
-            </Btn>
-            {logoPreview&&<Btn variant="danger" onClick={removeLogo} disabled={logoSaving} style={{flex:1,justifyContent:'center'}}>
-              Remove
-            </Btn>}
-          </div>
-        </Card>
-
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
           <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>{isMainAdmin?'Logging out will end your admin session.':'You are logged in as a staff account. Logging out will end your session.'}</p>
