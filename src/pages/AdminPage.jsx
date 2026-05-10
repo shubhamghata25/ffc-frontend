@@ -1678,7 +1678,7 @@ function Reels({ apiFetch, token, toast }) {
   const [reels, setReels] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // null | 'add' | reel object
-  const blank = { url:'', caption:'', order:0, active:true, thumbnail:'' }
+  const blank = { url:'', caption:'', order:0, active:true }
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
@@ -1779,23 +1779,6 @@ function Reels({ apiFetch, token, toast }) {
           </p>
           <FR label="Caption (optional)">
             <textarea style={{...inp,minHeight:68,resize:'vertical'}} value={form.caption} onChange={e=>set('caption',e.target.value)} placeholder="Short description shown below the reel"/>
-          </FR>
-          <FR label="Thumbnail Image (for Instagram reels)">
-            {form.thumbnail ? (
-              <div style={{textAlign:'center'}}>
-                <img src={form.thumbnail} alt="thumb" style={{width:'100%',borderRadius:10,maxHeight:140,objectFit:'cover',marginBottom:8}}/>
-                <button onClick={()=>set('thumbnail','')} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:12}}>✕ Remove</button>
-              </div>
-            ) : (
-              <label style={{display:'block',padding:'10px',border:'1px dashed rgba(124,58,237,0.35)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7'}}>
-                📷 Upload Thumbnail (screenshot of reel)
-                <input type="file" accept="image/*" onChange={e=>{
-                  const file=e.target.files[0]; if(!file) return
-                  const r=new FileReader(); r.onload=ev=>set('thumbnail',ev.target.result); r.readAsDataURL(file)
-                }} style={{display:'none'}}/>
-              </label>
-            )}
-            <p style={{fontSize:11,color:'#6b6490',marginTop:6}}>Instagram reels can't play inline — upload a screenshot to show as preview. Clicking opens Instagram.</p>
           </FR>
           <FR label="Order (lower = first)">
             <input style={inp} type="number" value={form.order} onChange={e=>set('order',Number(e.target.value))} min="0"/>
