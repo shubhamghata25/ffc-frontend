@@ -213,12 +213,16 @@ export default function Home() {
                     </div>
                   ) : (
                     /* Instagram — official blockquote embed, activated by embed.js */
-                    <blockquote
-                      className="instagram-media"
-                      data-instgrm-permalink={reel.url}
-                      data-instgrm-version="14"
-                      style={{background:'#FFF',border:0,borderRadius:3,margin:'0 auto',maxWidth:'100%',minWidth:240,width:'calc(100% - 2px)',padding:0}}
-                    />
+                    <div style={{position:'relative',overflow:'hidden',borderRadius:3}}>
+                      <blockquote
+                        className="instagram-media"
+                        data-instgrm-permalink={reel.url}
+                        data-instgrm-version="14"
+                        style={{background:'#FFF',border:0,borderRadius:3,margin:'0 auto',maxWidth:'100%',minWidth:240,width:'calc(100% - 2px)',padding:0,marginBottom:'-52px'}}
+                      />
+                      {/* Overlay to hide Instagram's "View on Instagram" footer bar */}
+                      <div style={{position:'absolute',bottom:0,left:0,right:0,height:52,background:'#fff',zIndex:10,borderTop:'1px solid #efefef'}}/>
+                    </div>
                   )}
                   {reel.caption && <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left',background:'rgba(13,11,26,0.9)'}}>{reel.caption}</div>}
                 </div>
