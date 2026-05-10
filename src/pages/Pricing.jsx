@@ -282,6 +282,18 @@ function PlanCard({ plan, onSelect, isHighlighted=false }) {
         <p style={{ color:'rgba(184,176,212,0.5)',fontSize:'clamp(11px,1.5vw,13px)',marginBottom:16,lineHeight:1.6 }}>{plan.description}</p>
       )}
 
+      {/* Regular plan access info badge */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center',marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(124,58,237,0.12)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'4px 12px'}}>
+          <span style={{fontSize:13}}>📅</span>
+          <span style={{fontSize:11,fontWeight:600,color:'#bb86fc'}}>1 Scan / Day</span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:20,padding:'4px 12px'}}>
+          <span style={{fontSize:13}}>🔑</span>
+          <span style={{fontSize:11,fontWeight:600,color:'#4ade80'}}>Valid {plan.period}</span>
+        </div>
+      </div>
+
       <ul style={{ listStyle:'none',marginBottom:24,textAlign:'left',flex:1 }}>
         {(plan.features||[]).map(f=>(
           <li key={f} style={{ color:'rgba(240,238,255,0.75)',fontSize:'clamp(11px,1.5vw,13px)',marginBottom:8,display:'flex',alignItems:'flex-start',gap:8,lineHeight:1.5 }}>
@@ -351,6 +363,22 @@ function PTCard({ plan, trainer, onSelect, isHighlighted=false }) {
             ₹{plan.originalPrice.toLocaleString()} <span style={{color:'#4ade80',textDecoration:'none',marginLeft:6,fontWeight:600}}>Save ₹{plan.originalPrice - plan.price}</span>
           </div>
         )}
+
+        {/* PT Plan info badges — scan days + QR window */}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
+          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.35)',borderRadius:20,padding:'4px 12px'}}>
+            <span style={{fontSize:14}}>📅</span>
+            <span style={{fontSize:12,fontWeight:600,color:'#bb86fc'}}>{plan.ptScanDays||30} Scan Days</span>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:20,padding:'4px 12px'}}>
+            <span style={{fontSize:14}}>🔑</span>
+            <span style={{fontSize:12,fontWeight:600,color:'#4ade80'}}>Valid {plan.ptWindowMonths||3} Months</span>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:20,padding:'4px 12px'}}>
+            <span style={{fontSize:14}}>⚡</span>
+            <span style={{fontSize:12,fontWeight:600,color:'#fbbf24'}}>1 Scan / Day</span>
+          </div>
+        </div>
 
         {/* Student intake progress */}
         <div style={{marginBottom:16}}>

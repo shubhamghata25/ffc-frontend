@@ -19,13 +19,13 @@ const uid   = () => Math.random().toString(36).slice(2,9)
 
 // Map plan period string → number of days
 const periodToDays = (period='') => {
-  const p = period.toLowerCase()
+  const p = period.toLowerCase().trim()
   if (p.includes('year'))    return 365
-  if (p.includes('half') || p==='6month' || p==='6months') return 182
-  if (p.includes('quarter') || p==='3month') return 91
-  if (p==='month' || p==='monthly') return 30
-  if (p==='week')  return 7
-  if (p==='day')   return 1
+  if (p.includes('half') || p==='6 months' || p==='6month' || p==='6months') return 182
+  if (p==='3 months' || p.includes('quarter') || p==='3month' || p==='3months') return 91
+  if (p==='month' || p==='monthly' || p==='1 month') return 30
+  if (p==='week' || p==='1 week') return 7
+  if (p==='day'  || p==='1 day')  return 1
   // fallback: try parsing a number from string
   const n = parseInt(p)
   return isNaN(n) ? 30 : n
@@ -964,19 +964,20 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   const end = new Date(form.joined)
                   end.setDate(end.getDate() + days)
                   set('endDate', end.toISOString().slice(0,10))
-                  // If PT plan is checked, also update accessEndDate
-                  if (form.ptPlan) {
+                  // PT plan: always 30 scan days, 3-month QR window
+                  if (form.ptPlan || sel.ptPlan) {
                     const access = new Date(form.joined)
-                    access.setDate(access.getDate() + days * 3)
+                    access.setMonth(access.getMonth() + 3)
                     set('accessEndDate', access.toISOString().slice(0,10))
-                    set('scanDays', days)
+                    set('scanDays', 30)
+                    set('ptPlan', true)
                   }
                 }
               }}>
                 <option value="">— Select Plan —</option>
                 {plans.length > 0
                   ? plans.filter(p=>p.active!==false).map(p=>(
-                      <option key={p.id} value={p.label}>{p.label} – ₹{p.effectivePrice||p.price}</option>
+                      <option key={p.id} value={p.label}>{p.label}{p.ptPlan ? ' 🏋 PT' : ''} – ₹{p.effectivePrice||p.price}</option>
                     ))
                   : ['Monthly – ₹1199','Quarterly – ₹2999','Half Yearly – ₹4999','Yearly – ₹9999'].map(p=><option key={p}>{p}</option>)
                 }
@@ -992,11 +993,12 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   const end = new Date(newDate)
                   end.setDate(end.getDate() + days)
                   set('endDate', end.toISOString().slice(0,10))
-                  if (form.ptPlan) {
+                  // PT plan: always 30 scan days, 3-month QR window
+                  if (form.ptPlan || sel.ptPlan) {
                     const access = new Date(newDate)
-                    access.setDate(access.getDate() + days * 3)
+                    access.setMonth(access.getMonth() + 3)
                     set('accessEndDate', access.toISOString().slice(0,10))
-                    set('scanDays', days)
+                    set('scanDays', 30)
                   }
                 }
               }}/>
@@ -1012,29 +1014,28 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
               <input type="checkbox" checked={!!form.ptPlan} onChange={e=>{
                 set('ptPlan', e.target.checked)
                 if (e.target.checked && form.joined) {
-                  const sel = plans.find(p=>p.label===form.plan)
-                  const days = sel ? periodToDays(sel.period) : (form.endDate ? Math.round((new Date(form.endDate)-new Date(form.joined))/86400000) : 30)
+                  // PT plan: 30 scan days, QR valid for 3 months from join date
                   const access = new Date(form.joined)
-                  access.setDate(access.getDate() + days * 3)
+                  access.setMonth(access.getMonth() + 3)
                   set('accessEndDate', access.toISOString().slice(0,10))
-                  set('scanDays', days)
+                  set('scanDays', 30)
                 } else {
                   set('accessEndDate', '')
                   set('scanDays', 0)
                 }
               }} style={{width:16,height:16,accentColor:'#7c3aed'}}/>
               <span style={{fontWeight:600,fontSize:13,color:'#bb86fc'}}>🏋 Personal Trainer (PT) Plan</span>
-              <span style={{fontSize:11,color:'#6b6490'}}>QR scan days limited + 2× access window</span>
+              <span style={{fontSize:11,color:'#6b6490'}}>30 scan days · QR valid 3 months</span>
             </label>
             {form.ptPlan && (
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <FR label="Total QR Scan Days">
+                <FR label="QR Scan Days Allowed">
                   <input style={inp} type="number" value={form.scanDays||''} onChange={e=>set('scanDays',parseInt(e.target.value)||0)} placeholder="e.g. 30"/>
-                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Actual paid gym days</div>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Distinct gym days member can attend (default 30)</div>
                 </FR>
-                <FR label="Physical Access Window End">
+                <FR label="QR Access Window End Date">
                   <input style={{...inp,color:'#22c55e'}} type="date" value={form.accessEndDate||''} onChange={e=>set('accessEndDate',e.target.value)}/>
-                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>Last day member can enter gym</div>
+                  <div style={{fontSize:11,color:'#6b6490',marginTop:3}}>QR stops working after this date (default: join + 3 months)</div>
                 </FR>
               </div>
             )}
