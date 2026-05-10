@@ -190,16 +190,44 @@ export default function Home() {
             {reels.map(reel=>{
               const isYT = reel.url.includes('youtube.com') || reel.url.includes('youtu.be')
               const ytId = isYT ? (reel.url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?/]+)/)||[])[1] : null
-              const igUrl = !isYT ? reel.url.replace(/\/?$/, '/embed/') : null
               return (
-                <div key={reel._uid||reel.id} style={{flexShrink:0,width:'clamp(260px,72vw,320px)',scrollSnapAlign:'start',borderRadius:18,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'rgba(13,11,26,0.9)'}}>
-                  <div style={{position:'relative',width:'100%',paddingBottom:isYT?'56.25%':'125%',background:'#0d0b1a'}}>
-                    {isYT && ytId ? (
+                <div key={reel._uid||reel.id} style={{flexShrink:0,width:'clamp(240px,70vw,300px)',scrollSnapAlign:'start',borderRadius:18,overflow:'hidden',border:'1px solid rgba(124,58,237,0.2)',background:'rgba(13,11,26,0.9)',cursor:'pointer'}}
+                  onClick={()=>window.open(reel.url,'_blank')}>
+                  {/* YouTube — embed works fine */}
+                  {isYT && ytId ? (
+                    <div style={{position:'relative',width:'100%',paddingBottom:'56.25%',background:'#0d0b1a'}}>
                       <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`} title={reel.caption||'Video'} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowFullScreen style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}/>
-                    ) : (
-                      <iframe src={igUrl} title={reel.caption||'Instagram'} frameBorder="0" scrolling="no" allowTransparency style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}}/>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    /* Instagram — show thumbnail + play overlay, click opens Instagram */
+                    <div style={{position:'relative',width:'100%',paddingBottom:'125%',background:'linear-gradient(145deg,#1a0a3e,#0d0b1a)',overflow:'hidden'}}>
+                      {reel.thumbnail ? (
+                        <img src={reel.thumbnail} alt={reel.caption||'Reel'} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                      ) : (
+                        <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                            <circle cx="12" cy="12" r="4"/>
+                            <circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/>
+                          </svg>
+                          <span style={{color:'rgba(184,176,212,0.5)',fontSize:12}}>Instagram Reel</span>
+                        </div>
+                      )}
+                      {/* Play button overlay */}
+                      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.3)',transition:'background .2s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.5)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='rgba(0,0,0,0.3)'}>
+                        <div style={{width:56,height:56,borderRadius:'50%',background:'linear-gradient(135deg,#E1306C,#833AB4)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 20px rgba(225,48,108,0.5)'}}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                        </div>
+                      </div>
+                      {/* Instagram badge */}
+                      <div style={{position:'absolute',top:10,left:10,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.6)',borderRadius:20,padding:'4px 10px'}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
+                        <span style={{color:'#fff',fontSize:11,fontWeight:600}}>Instagram</span>
+                      </div>
+                    </div>
+                  )}
                   {reel.caption && <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left'}}>{reel.caption}</div>}
                 </div>
               )
