@@ -177,6 +177,20 @@ img { max-width:100%; height:auto; display:block; }
 .fade-in { animation:fadeIn .5s ease both; }
 
 /* ════════════════
+   SELECT OPTIONS
+   Force dark bg on native dropdown options
+════════════════ */
+select option {
+  background: #130f24;
+  color: #f0eeff;
+}
+select option:checked,
+select option:hover {
+  background: #2a2347;
+  color: #bb86fc;
+}
+
+/* ════════════════
    FORM INPUTS
 ════════════════ */
 .form-input {

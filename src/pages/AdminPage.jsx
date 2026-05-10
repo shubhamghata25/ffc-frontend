@@ -121,7 +121,7 @@ const CSS = `
     .member-card { display:block; }
     .hide-mobile { display:none !important; }
     .adm-hamburger { display:flex !important; }
-    .adm-modal-inner { border-radius:20px 20px 0 0 !important; margin-bottom:0 !important; }
+    .adm-modal-inner { border-radius:20px !important; }
   }
   @media(min-width:769px){
     .adm-overlay-bg { display:none !important; }
@@ -151,8 +151,8 @@ const Card = ({ children, style:s={}, className='' }) => (
 )
 
 const Modal = ({ title, children, onClose, wide=false }) => (
-  <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0',overflowY:'auto'}}>
-    <div className="adm-fade adm-modal-inner" style={{background:'#130f24',border:'1px solid #2a2347',borderRadius:20,padding:'24px 20px',width:'100%',maxWidth:wide?680:500,maxHeight:'92vh',overflowY:'auto',marginTop:'auto'}}>
+  <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(4px)',zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'5vh 0 40px',overflowY:'auto'}}>
+    <div className="adm-fade adm-modal-inner" style={{background:'#130f24',border:'1px solid #2a2347',borderRadius:20,padding:'24px 20px',width:'100%',maxWidth:wide?680:500,overflowY:'visible',margin:'0 12px'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
         <h3 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:1,color:'#7c3aed'}}>{title}</h3>
         <button onClick={onClose} style={{background:'none',border:'none',color:'#6b6490',fontSize:22,cursor:'pointer',padding:'4px 8px',minWidth:44,minHeight:44,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>

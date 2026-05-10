@@ -67,7 +67,7 @@ export default function Exercises() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .ex-sidebar{width:210px;min-height:100vh;background:rgba(13,11,26,0.95);border-right:1px solid rgba(124,58,237,0.12);padding:84px 0 30px;position:fixed;top:0;left:0;z-index:10}
+        .ex-sidebar{width:210px;height:100vh;overflow-y:auto;background:rgba(13,11,26,0.95);border-right:1px solid rgba(124,58,237,0.12);padding:84px 0 30px;position:fixed;top:0;left:0;z-index:10}
         .ex-main{margin-left:210px;padding:84px 28px 60px}
         .ex-card{background:linear-gradient(145deg,#130f24,#1a1535);border-radius:18px;border:1px solid rgba(124,58,237,0.12);overflow:hidden;transition:transform .3s,box-shadow .3s,border-color .3s;animation:fadeUp .4s ease both}
         .ex-card:hover{transform:translateY(-5px);box-shadow:0 14px 40px rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.3)}
