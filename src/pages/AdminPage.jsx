@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import AdminStore     from '../admin/AdminStore.jsx'
-import AdminExercises from '../admin/AdminExercises.jsx'
-import AdminPricing   from '../admin/AdminPricing.jsx'
+import AdminStore        from '../admin/AdminStore.jsx'
+import AdminExercises   from '../admin/AdminExercises.jsx'
+import AdminPricing     from '../admin/AdminPricing.jsx'
 
 // ─── SECURITY NOTES ───────────────────────────────────────────────────────────
 // 1. NO hardcoded credentials. Login is verified server-side via bcrypt.
@@ -1975,7 +1975,7 @@ const NAV_ALL = [
   {id:'posts',      icon:'💬', label:'Posts',      adminOnly:false },
   {id:'store',      icon:'🛒', label:'Store',      adminOnly:false },
   {id:'pricing',    icon:'💳', label:'Pricing',    adminOnly:false },
-  {id:'exercises',  icon:'🏃', label:'Exercises',  adminOnly:false },
+  {id:'exercises',    icon:'🏃', label:'Exercises',      adminOnly:false },
   {id:'reels',      icon:'📸', label:'Reels',      adminOnly:true  },
   {id:'revenue',    icon:'📈', label:'Revenue',    adminOnly:true  },
   {id:'expenses',   icon:'💸', label:'Expenses',   adminOnly:true  },
@@ -2744,7 +2744,7 @@ export default function AdminPage() {
     trainers:   <Trainers   {...{apiFetch,token,trainers,isMainAdmin,plans}} reload={loadAll} toast={showToast}/>,
     store:      <AdminStore     {...shared} isMainAdmin={isMainAdmin}/>,
     pricing:    <AdminPricing   {...shared} isMainAdmin={isMainAdmin}/>,
-    exercises:  <AdminExercises {...shared} isMainAdmin={isMainAdmin}/>,
+    exercises:    <AdminExercises    {...shared} isMainAdmin={isMainAdmin}/>,
     posts:      <Posts apiFetch={apiFetch} token={token} toast={showToast}/>,
     // Main-admin-only pages
     reels:      isMainAdmin ? <Reels apiFetch={apiFetch} token={token} toast={showToast}/> : <AccessDenied/>,
