@@ -1561,6 +1561,9 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
   const [pwSaving,setPwSaving]=useState(false)
   const [gymSaving,setGymSaving]=useState(false)
   const [gymMsg,setGymMsg]=useState(null)
+  const [logoPreview,setLogoPreview]=useState('')
+  const [logoSaving,setLogoSaving]=useState(false)
+  const [logoMsg,setLogoMsg]=useState(null)
   const [gymForm,setGymForm]=useState({
     gymName:'Friends Fitness Club',
     phone:'+91 84848 05154',
@@ -1580,7 +1583,40 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
     apiFetch('/api/admin/gym-info')
       .then(data=>{ if(data&&Object.keys(data).length) setGymForm(f=>({...f,...data})) })
       .catch(()=>{})
+    // load existing logo
+    fetch((typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com') : 'https://ffc-backend-50cu.onrender.com') + '/api/gym-logo')
+      .then(r=>r.json()).then(d=>{ if(d.logo) setLogoPreview(d.logo) }).catch(()=>{})
   },[])
+
+  const saveLogo = async () => {
+    setLogoSaving(true); setLogoMsg(null)
+    try {
+      await apiFetch('/api/admin/gym-logo','POST',{ logo: logoPreview })
+      setLogoMsg({ok:true,msg:'Logo saved! It will appear in the navbar immediately.'})
+    } catch(e) { setLogoMsg({ok:false,msg:e.message||'Failed to save logo'}) }
+    setLogoSaving(false)
+    setTimeout(()=>setLogoMsg(null),4000)
+  }
+
+  const removeLogo = async () => {
+    setLogoSaving(true)
+    try {
+      await apiFetch('/api/admin/gym-logo','POST',{ logo:'' })
+      setLogoPreview('')
+      setLogoMsg({ok:true,msg:'Logo removed. Navbar will show text name.'})
+    } catch(e) { setLogoMsg({ok:false,msg:'Failed to remove logo'}) }
+    setLogoSaving(false)
+    setTimeout(()=>setLogoMsg(null),3000)
+  }
+
+  function handleLogoUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { setLogoMsg({ok:false,msg:'Image must be under 2MB'}); return }
+    const reader = new FileReader()
+    reader.onload = ev => setLogoPreview(ev.target.result)
+    reader.readAsDataURL(file)
+  }
 
   const saveGymInfo = async () => {
     setGymSaving(true); setGymMsg(null)
@@ -1664,6 +1700,36 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
           </p>
           <div style={{marginTop:12,fontSize:12,color:'#7c3aed',fontWeight:600}}>Manage Sub-Admins →</div>
         </Card>}
+        {/* ── Gym Logo ── */}
+        <Card style={{padding:26,border:'1px solid rgba(124,58,237,0.3)'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#bb86fc',marginBottom:4}}>🏋 Gym Logo</div>
+          <p style={{fontSize:12,color:'#6b6490',marginBottom:14,lineHeight:1.6}}>Upload your gym logo. It appears in the navbar across the whole website. PNG/JPG, under 2MB. Transparent PNG works best.</p>
+
+          {/* Preview */}
+          <div style={{minHeight:80,border:'1px dashed rgba(124,58,237,0.35)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:14,background:'rgba(255,255,255,0.02)',padding:12}}>
+            {logoPreview
+              ? <img src={logoPreview} alt="Logo preview" style={{maxHeight:80,maxWidth:'100%',objectFit:'contain',borderRadius:6}}/>
+              : <span style={{fontSize:12,color:'#4b4570'}}>No logo uploaded — navbar shows text</span>
+            }
+          </div>
+
+          <label style={{display:'block',padding:'10px',border:'1px dashed rgba(124,58,237,0.4)',borderRadius:10,textAlign:'center',cursor:'pointer',fontSize:13,color:'#9c59f7',marginBottom:12}}>
+            📁 Upload Logo Image (PNG / JPG)
+            <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={handleLogoUpload} style={{display:'none'}}/>
+          </label>
+
+          {logoMsg&&<div style={{marginBottom:10,padding:'8px 12px',borderRadius:8,background:logoMsg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:logoMsg.ok?'#22c55e':'#ef4444',fontSize:13}}>{logoMsg.ok?'✅':'❌'} {logoMsg.msg}</div>}
+
+          <div style={{display:'flex',gap:10}}>
+            <Btn onClick={saveLogo} disabled={logoSaving||!logoPreview} style={{flex:1,justifyContent:'center'}}>
+              {logoSaving?<Spinner/>:'Save Logo'}
+            </Btn>
+            {logoPreview&&<Btn variant="danger" onClick={removeLogo} disabled={logoSaving} style={{flex:1,justifyContent:'center'}}>
+              Remove
+            </Btn>}
+          </div>
+        </Card>
+
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
           <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>{isMainAdmin?'Logging out will end your admin session.':'You are logged in as a staff account. Logging out will end your session.'}</p>

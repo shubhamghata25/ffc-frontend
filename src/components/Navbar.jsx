@@ -10,10 +10,20 @@ const LINKS = [
   { to:'/contact',   label:'Contact'   },
 ]
 
+const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
+
 export default function Navbar() {
   const [open, setOpen]       = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [gymLogo, setGymLogo] = useState('')
   const { pathname }          = useLocation()
+
+  useEffect(() => {
+    fetch(`${API}/api/gym-logo`)
+      .then(r => r.json())
+      .then(d => { if (d.logo) setGymLogo(d.logo) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
@@ -59,14 +69,18 @@ export default function Navbar() {
         boxShadow: scrolled ? '0 4px 32px rgba(0,0,0,0.4)' : 'none',
       }}>
         {/* Logo */}
-        <NavLink to="/" style={{
-          fontFamily:"'Bebas Neue',sans-serif",
-          fontSize: 'clamp(18px,3.5vw,26px)', letterSpacing: 'clamp(1px,0.5vw,3px)',
-          background:'linear-gradient(135deg,#bb86fc,#7c3aed)',
-          WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-          backgroundClip:'text',
-        }}>
-          Friends Fitness Club
+        <NavLink to="/" style={{ display:'flex',alignItems:'center',gap:10,textDecoration:'none' }}>
+          {gymLogo ? (
+            <img src={gymLogo} alt="Friends Fitness Club" style={{ height:'clamp(32px,5vw,44px)',maxWidth:160,objectFit:'contain',filter:'drop-shadow(0 2px 8px rgba(124,58,237,0.4))' }}/>
+          ) : (
+            <span style={{
+              fontFamily:"'Bebas Neue',sans-serif",
+              fontSize:'clamp(18px,3.5vw,26px)', letterSpacing:'clamp(1px,0.5vw,3px)',
+              background:'linear-gradient(135deg,#bb86fc,#7c3aed)',
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+              backgroundClip:'text',
+            }}>Friends Fitness Club</span>
+          )}
         </NavLink>
 
         {/* Desktop nav */}

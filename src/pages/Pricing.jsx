@@ -6,7 +6,9 @@ const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.c
 
 /* ─── Payment method modal ─── */
 function PayModal({ plan, onClose, onDone }) {
-  const [step, setStep]   = useState('details')   // 'details' | 'method'
+  const [step, setStep]   = useState('details')   // 'details' | 'date' | 'method'
+  const todayStr = new Date().toISOString().slice(0,10)
+  const [joiningDate, setJoiningDate] = useState(todayStr)
   const [paying, setPaying] = useState(false)
   const [form, setForm]   = useState({ name:'', email:'', phone:'', address:'', aadhaar:'' })
   const [aadhaarPreview, setAadhaarPreview] = useState(null)
@@ -70,6 +72,7 @@ function PayModal({ plan, onClose, onDone }) {
         memberName:form.name, memberEmail:form.email, memberPhone:form.phone,
         memberAddress:form.address, aadhaarPhoto:form.aadhaar||'',
         planLabel:plan.label, planPeriod:plan.period, planPrice:plan.price,
+        joiningDate,
       },
       onSuccess: () => {
         success('Payment successful! Check your email for confirmation and QR code.')
@@ -107,7 +110,7 @@ function PayModal({ plan, onClose, onDone }) {
           {/* Plan summary */}
           <div style={{ textAlign:'center',marginBottom:20 }}>
             <div style={{ fontSize:11,color:'#9c59f7',fontWeight:700,letterSpacing:2,marginBottom:6,textTransform:'uppercase' }}>
-              {step==='details' ? 'Step 1 of 2 — Your Details' : 'Step 2 of 2 — Payment'}
+              {step==='details' ? 'Step 1 of 3 — Your Details' : step==='date' ? 'Step 2 of 3 — Joining Date' : 'Step 3 of 3 — Payment'}
             </div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:26,letterSpacing:1 }}>{plan.label} Membership</div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:44,background:'linear-gradient(135deg,#bb86fc,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',lineHeight:1.1 }}>
@@ -175,19 +178,57 @@ function PayModal({ plan, onClose, onDone }) {
                   </div>
                 )}
               </div>
-              <button onClick={() => setStep('method')} disabled={!valid}
+              <button onClick={() => setStep('date')} disabled={!valid}
                 style={{ padding:'14px',border:'none',borderRadius:40,background:valid?'linear-gradient(135deg,#7c3aed,#9c59f7)':'rgba(124,58,237,0.2)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:valid?'pointer':'not-allowed',marginTop:4 }}>
-                Continue to Payment →
+                Continue →
               </button>
               {!valid && <p style={{ textAlign:'center',fontSize:11,color:'#6b6490' }}>Name, phone number and address are required</p>}
             </div>
           )}
 
-          {/* STEP 2: Payment methods */}
+          {/* STEP 2: Joining Date */}
+          {step === 'date' && (
+            <div style={{ display:'flex',flexDirection:'column',gap:18 }}>
+              <div style={{ background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'16px 18px' }}>
+                <div style={{ fontSize:13,fontWeight:700,color:'#bb86fc',marginBottom:6 }}>📅 When do you want to start?</div>
+                <p style={{ fontSize:12,color:'#6b6490',margin:'0 0 14px',lineHeight:1.6 }}>
+                  Choose your membership joining date. Your plan validity will start from this date.
+                </p>
+                <label style={{ fontSize:11,color:'#6b6490',display:'block',marginBottom:6 }}>Joining Date *</label>
+                <input
+                  type="date"
+                  value={joiningDate}
+                  min={todayStr}
+                  onChange={e=>setJoiningDate(e.target.value)}
+                  style={{ width:'100%',padding:'12px 14px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(124,58,237,0.4)',borderRadius:10,color:'#f0eeff',fontFamily:"'Poppins',sans-serif",fontSize:15,outline:'none',boxSizing:'border-box' }}
+                />
+                {joiningDate > todayStr && (
+                  <div style={{ marginTop:10,padding:'8px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',borderRadius:8,fontSize:12,color:'#fbbf24' }}>
+                    ⚠️ Future date selected — your membership and QR will activate on {joiningDate}
+                  </div>
+                )}
+                {joiningDate === todayStr && (
+                  <div style={{ marginTop:10,padding:'8px 12px',background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,fontSize:12,color:'#4ade80' }}>
+                    ✅ Membership starts today
+                  </div>
+                )}
+              </div>
+              <button onClick={()=>setStep('method')}
+                style={{ padding:'14px',border:'none',borderRadius:40,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',color:'#fff',fontFamily:"'Poppins',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer' }}>
+                Continue to Payment →
+              </button>
+              <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
+                ← Edit details
+              </button>
+            </div>
+          )}
+
+          {/* STEP 3: Payment methods */}
           {step === 'method' && (
             <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
               <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#4ade80',marginBottom:4 }}>
-                Paying as: <strong>{form.name}</strong> · {form.phone}
+                <div>Paying as: <strong>{form.name}</strong> · {form.phone}</div>
+                <div style={{marginTop:4,color:'#60a5fa'}}>📅 Joining: <strong>{joiningDate}</strong></div>
               </div>
 
               <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
@@ -208,8 +249,8 @@ function PayModal({ plan, onClose, onDone }) {
                 <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
               </button>
 
-              <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
-                ← Edit details
+              <button onClick={()=>setStep('date')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
+                ← Change joining date
               </button>
             </div>
           )}
@@ -282,18 +323,6 @@ function PlanCard({ plan, onSelect, isHighlighted=false }) {
         <p style={{ color:'rgba(184,176,212,0.5)',fontSize:'clamp(11px,1.5vw,13px)',marginBottom:16,lineHeight:1.6 }}>{plan.description}</p>
       )}
 
-      {/* Regular plan access info badge */}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center',marginBottom:16}}>
-        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(124,58,237,0.12)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:20,padding:'4px 12px'}}>
-          <span style={{fontSize:13}}>📅</span>
-          <span style={{fontSize:11,fontWeight:600,color:'#bb86fc'}}>1 Scan / Day</span>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:20,padding:'4px 12px'}}>
-          <span style={{fontSize:13}}>🔑</span>
-          <span style={{fontSize:11,fontWeight:600,color:'#4ade80'}}>Valid {plan.period}</span>
-        </div>
-      </div>
-
       <ul style={{ listStyle:'none',marginBottom:24,textAlign:'left',flex:1 }}>
         {(plan.features||[]).map(f=>(
           <li key={f} style={{ color:'rgba(240,238,255,0.75)',fontSize:'clamp(11px,1.5vw,13px)',marginBottom:8,display:'flex',alignItems:'flex-start',gap:8,lineHeight:1.5 }}>
@@ -363,22 +392,6 @@ function PTCard({ plan, trainer, onSelect, isHighlighted=false }) {
             ₹{plan.originalPrice.toLocaleString()} <span style={{color:'#4ade80',textDecoration:'none',marginLeft:6,fontWeight:600}}>Save ₹{plan.originalPrice - plan.price}</span>
           </div>
         )}
-
-        {/* PT Plan info badges — scan days + QR window */}
-        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
-          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.35)',borderRadius:20,padding:'4px 12px'}}>
-            <span style={{fontSize:14}}>📅</span>
-            <span style={{fontSize:12,fontWeight:600,color:'#bb86fc'}}>{plan.ptScanDays||30} Scan Days</span>
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:20,padding:'4px 12px'}}>
-            <span style={{fontSize:14}}>🔑</span>
-            <span style={{fontSize:12,fontWeight:600,color:'#4ade80'}}>Valid {plan.ptWindowMonths||3} Months</span>
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:20,padding:'4px 12px'}}>
-            <span style={{fontSize:14}}>⚡</span>
-            <span style={{fontSize:12,fontWeight:600,color:'#fbbf24'}}>1 Scan / Day</span>
-          </div>
-        </div>
 
         {/* Student intake progress */}
         <div style={{marginBottom:16}}>
