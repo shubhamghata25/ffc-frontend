@@ -59,18 +59,7 @@ export default function Home() {
 
   useEffect(()=>{ if(posts.length>1){ const t=setInterval(()=>setPostIdx(i=>(i+1)%posts.length),4000); return()=>clearInterval(t) } },[posts])
 
-  // Load Instagram embed script whenever reels change (so newly rendered blockquotes get processed)
-  useEffect(()=>{
-    if(!reels.some(r=>!r.url.includes('youtube.com')&&!r.url.includes('youtu.be'))) return
-    if(window.instgrm){ window.instgrm.Embeds.process(); return }
-    if(document.getElementById('instagram-embed-script')) return
-    const s=document.createElement('script')
-    s.id='instagram-embed-script'
-    s.src='https://www.instagram.com/embed.js'
-    s.async=true
-    s.onload=()=>{ if(window.instgrm) window.instgrm.Embeds.process() }
-    document.body.appendChild(s)
-  },[reels])
+
 
   return (
     <>
@@ -212,17 +201,43 @@ export default function Home() {
                       <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`} title={reel.caption||'Video'} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope" allowFullScreen style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}/>
                     </div>
                   ) : (
-                    /* Instagram — official blockquote embed, activated by embed.js */
-                    <div style={{position:'relative',overflow:'hidden',borderRadius:3}}>
-                      <blockquote
-                        className="instagram-media"
-                        data-instgrm-permalink={reel.url}
-                        data-instgrm-version="14"
-                        style={{background:'#FFF',border:0,borderRadius:3,margin:'0 auto',maxWidth:'100%',minWidth:240,width:'calc(100% - 2px)',padding:0,marginBottom:'-52px'}}
-                      />
-                      {/* Overlay to hide Instagram's "View on Instagram" footer bar */}
-                      <div style={{position:'absolute',bottom:0,left:0,right:0,height:52,background:'#fff',zIndex:10,borderTop:'1px solid #efefef'}}/>
-                    </div>
+                    /* Instagram — direct iframe embed, clipped to hide footer bar */
+                    (() => {
+                      // Extract shortcode from URL: /p/CODE/ or /reel/CODE/
+                      const sc = (reel.url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/) || [])[1]
+                      if (!sc) return (
+                        <a href={reel.url} target="_blank" rel="noreferrer"
+                          style={{display:'flex',alignItems:'center',justifyContent:'center',height:200,color:'#E1306C',fontSize:13,fontWeight:600,textDecoration:'none'}}>
+                          View on Instagram ↗
+                        </a>
+                      )
+                      return (
+                        // Outer div clips the bottom ~55px footer (like/comment/view bar)
+                        <div style={{
+                          position:'relative',
+                          width:'100%',
+                          height:0,
+                          paddingBottom:'calc(125% - 55px)',
+                          overflow:'hidden',
+                          background:'#fff'
+                        }}>
+                          <iframe
+                            src={`https://www.instagram.com/p/${sc}/embed/captioned/`}
+                            style={{
+                              position:'absolute',
+                              top:0, left:0,
+                              width:'100%',
+                              height:'calc(100% + 55px)',
+                              border:'none',
+                              overflow:'hidden'
+                            }}
+                            scrolling="no"
+                            allowTransparency={true}
+                            allow="encrypted-media"
+                          />
+                        </div>
+                      )
+                    })()
                   )}
                   {reel.caption && <div style={{padding:'12px 14px',fontSize:13,color:'rgba(184,176,212,0.8)',lineHeight:1.5,textAlign:'left',background:'rgba(13,11,26,0.9)'}}>{reel.caption}</div>}
                 </div>
