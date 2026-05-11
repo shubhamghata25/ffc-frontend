@@ -19,10 +19,10 @@ const uid   = () => Math.random().toString(36).slice(2,9)
 
 // Map plan period string → number of days
 const periodToDays = (period='') => {
-  const p = period.toLowerCase()
+  const p = period.toLowerCase().replace(/\s+/g,'') // strip spaces: "3 months" → "3months"
   if (p.includes('year'))    return 365
   if (p.includes('half') || p==='6month' || p==='6months') return 182
-  if (p.includes('quarter') || p==='3month') return 91
+  if (p.includes('quarter') || p==='3month' || p==='3months') return 91
   if (p==='month' || p==='monthly') return 30
   if (p==='week')  return 7
   if (p==='day')   return 1
@@ -828,6 +828,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
   const [extendDate,     setExtendDate]     = useState('')
   const [extendNote,     setExtendNote]     = useState('')
   const [extendSaving,   setExtendSaving]   = useState(false)
+  const [triedSave,      setTriedSave]      = useState(false)
   const set = (k, v) => {
     setForm(f => {
       const updated = { ...f, [k]: v }
@@ -850,9 +851,8 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
   )
 
   // Partial payment: reactive computed values (outside JSX so they update on every render)
-  const selPlan     = plans.find(p => p.label === form.plan || form.plan.startsWith(p.label))
-  const planPrice   = Number(selPlan?.effectivePrice || selPlan?.price) ||
-                      Number((form.plan||'').match(/₹\s*(\d+)/)?.[1]) || 0
+  const selPlan     = plans.find(p => p.label === form.plan)
+  const planPrice   = Number(selPlan?.price) || Number(selPlan?.effectivePrice) || 0
   const partialPaid = Number(form.paidAmount) || 0
   const partialRem  = planPrice > 0 ? Math.max(0, planPrice - partialPaid) : null
   const today       = new Date()
@@ -864,6 +864,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
   ]
 
   const save = async () => {
+    setTriedSave(true)
     if (!form.name || !form.phone) { toast('Name and phone are required','err'); return }
     if (!form.address || !form.address.trim()) { toast('Address is required','err'); return }
     setSaving(true)
@@ -1038,7 +1039,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
 
       {/* Add / Edit modal */}
       {modal && (
-        <Modal title={modal==='add' ? '🏋 Walk-in Registration' : 'Edit Member'} onClose={()=>setModal(null)} wide>
+        <Modal title={modal==='add' ? '🏋 Walk-in Registration' : 'Edit Member'} onClose={()=>{setModal(null);setTriedSave(false);setPaymentType('full')}} wide>
           {modal==='add' && (
             <div style={{background:'rgba(34,197,94,0.07)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:18,fontSize:13,color:'#6b9e7a',lineHeight:1.7}}>
               ✅ Fill the form and click <strong>Register</strong> — a QR membership card is generated instantly. No mobile or internet needed by the member.
@@ -1051,11 +1052,13 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
           <FR label="Email (optional — for QR email delivery)">
             <input style={inp} value={form.email||''} onChange={e=>set('email',e.target.value)} placeholder="member@email.com" type="email"/>
           </FR>
-          <FR label={<span>Address <span style={{color:'#ef4444'}}>*</span></span>}>
-            <input style={{...inp, borderColor: (!form.address&&modal==='add') ? 'rgba(239,68,68,0.5)' : undefined}}
+          <FR label="Address *">
+            <input
+              style={{...inp, borderColor: (triedSave && !form.address?.trim()) ? '#ef4444' : undefined}}
               value={form.address||''} onChange={e=>set('address',e.target.value)}
-              placeholder="House No, Street, Area, City"
+              placeholder="House No, Street, Area, City  (required)"
             />
+            {triedSave && !form.address?.trim() && <div style={{fontSize:11,color:'#ef4444',marginTop:3}}>⚠ Address is required</div>}
           </FR>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
             <FR label="Plan">
