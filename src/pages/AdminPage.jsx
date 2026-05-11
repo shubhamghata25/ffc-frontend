@@ -856,10 +856,11 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
       // Build submission with partial payment fields
       const submission = { ...form }
       if (modal === 'add' && paymentType === 'partial') {
-        const planPrice = parseInt((form.plan||'').replace(/[^\d]/g,'')) || 0
+        const rawPrice = (form.plan||'').match(/₹\s*(\d+)/)?.[1] || (form.plan||'').replace(/[^\d]/g,'').slice(-4)
+        const planPrice = Number(rawPrice) || 0
         const paid = Number(form.paidAmount) || 0
-        const remaining = planPrice > 0 ? Math.max(0, planPrice - paid) : (Number(form.remainingAmount) || 0)
-        submission.fee = 'Partial'
+        const remaining = planPrice > 0 ? Math.max(0, planPrice - paid) : 0
+        submission.fee = remaining <= 0 ? 'Paid' : 'Partial'
         submission.paidAmount = paid
         submission.remainingAmount = remaining
         submission.nextPaymentDate = form.nextPaymentDate || ''
@@ -1152,22 +1153,65 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   </button>
                 ))}
               </div>
-              {paymentType==='partial'&&(
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}}>
-                  <FR label="Amount Paid Now (₹)">
-                    <input style={inp} type="number" min="0" value={form.paidAmount||''} onChange={e=>set('paidAmount',e.target.value)} placeholder="e.g. 500"/>
-                  </FR>
-                  <FR label="Remaining Amount (₹)">
-                    <input style={inp} type="number" min="0" value={form.remainingAmount||''} onChange={e=>set('remainingAmount',e.target.value)} placeholder="e.g. 500"/>
-                  </FR>
-                  <FR label="Next Payment Date" style={{gridColumn:'1/-1'}}>
-                    <input style={inp} type="date" value={form.nextPaymentDate||''} onChange={e=>set('nextPaymentDate',e.target.value)}/>
-                  </FR>
-                  <div style={{gridColumn:'1/-1',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#f59e0b'}}>
-                    ⚠️ Member will be marked as <strong>Partial</strong> — you can collect the remaining balance later from the Members list.
+              {paymentType==='partial'&&(()=>{
+                const rawPrice = (form.plan||'').match(/₹\s*(\d+)/)?.[1] || (form.plan||'').replace(/[^\d]/g,'').slice(-4)
+                const planPrice = Number(rawPrice) || 0
+                const paid = Number(form.paidAmount) || 0
+                const remaining = planPrice > 0 ? Math.max(0, planPrice - paid) : null
+                const today = new Date()
+                const addDays = d => { const dt = new Date(today); dt.setDate(dt.getDate()+d); return dt.toISOString().slice(0,10) }
+                const presets = [
+                  { label:'+7 days',  sub:'1 week',    val: addDays(7)  },
+                  { label:'+15 days', sub:'2 weeks',   val: addDays(15) },
+                  { label:'+30 days', sub:'Next month', val: addDays(30) },
+                ]
+                return (
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    <FR label="Amount Paid Now (₹)">
+                      <input style={inp} type="number" min="0" max={planPrice||undefined}
+                        value={form.paidAmount||''}
+                        onChange={e=>set('paidAmount',e.target.value)}
+                        placeholder={planPrice ? `Plan total: ₹${planPrice}` : 'e.g. 500'}
+                        autoFocus
+                      />
+                    </FR>
+                    <div style={{background:'rgba(13,11,26,0.6)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:10,padding:'10px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:12,color:'#6b6490'}}>Remaining Balance</span>
+                      <span style={{fontSize:20,fontWeight:800,color:remaining===0?'#22c55e':remaining===null?'#6b6490':'#f59e0b'}}>
+                        {remaining===null?'—':remaining===0?'✅ Fully Paid':`₹${remaining}`}
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:'#9d8ec7',fontWeight:600,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Next Payment Date</div>
+                      <div style={{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap'}}>
+                        {presets.map(p=>(
+                          <button key={p.val} onClick={()=>set('nextPaymentDate',p.val)}
+                            style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${form.nextPaymentDate===p.val?'#7c3aed':'rgba(124,58,237,0.25)'}`,background:form.nextPaymentDate===p.val?'rgba(124,58,237,0.2)':'transparent',color:form.nextPaymentDate===p.val?'#bb86fc':'#9d8ec7',cursor:'pointer',fontSize:12,fontWeight:600,transition:'all .15s',textAlign:'center',lineHeight:1.4}}>
+                            <div>{p.label}</div>
+                            <div style={{fontSize:10,opacity:.7,fontWeight:400}}>{p.sub}</div>
+                          </button>
+                        ))}
+                        <button onClick={()=>set('nextPaymentDate','')}
+                          style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${!form.nextPaymentDate?'rgba(239,68,68,0.4)':'rgba(124,58,237,0.15)'}`,background:!form.nextPaymentDate?'rgba(239,68,68,0.08)':'transparent',color:!form.nextPaymentDate?'#ef4444':'#6b6490',cursor:'pointer',fontSize:12,fontWeight:600,textAlign:'center',lineHeight:1.4}}>
+                          <div>No date</div>
+                          <div style={{fontSize:10,opacity:.7,fontWeight:400}}>Skip</div>
+                        </button>
+                      </div>
+                      <input style={{...inp,fontSize:13}} type="date"
+                        value={form.nextPaymentDate||''}
+                        onChange={e=>set('nextPaymentDate',e.target.value)}
+                        min={new Date().toISOString().slice(0,10)}
+                      />
+                      {form.nextPaymentDate&&<div style={{fontSize:11,color:'#9d8ec7',marginTop:5}}>
+                        📅 Payment expected by <strong style={{color:'#f0eeff'}}>{new Date(form.nextPaymentDate+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</strong>
+                      </div>}
+                    </div>
+                    <div style={{background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#f59e0b'}}>
+                      ⚠️ Member will be marked as <strong>Partial</strong> — collect remaining balance later from the Members list.
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )}
 
