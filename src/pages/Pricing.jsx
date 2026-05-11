@@ -426,20 +426,37 @@ export default function Pricing() {
   useEffect(()=>{
     if(loading) return
     if(!trainerIdParam && !planIdParam && sectionParam !== 'pt') return
-    const timer = setTimeout(()=>{
-      if(ptRef.current) ptRef.current.scrollIntoView({behavior:'smooth',block:'start'})
-    }, 300)
-    return () => clearTimeout(timer)
-  },[loading, trainerIdParam, sectionParam])
+    // Two-stage scroll: immediate rough scroll, then refined — fixes mobile browsers
+    // that reset scroll position after initial paint
+    const doScroll = () => {
+      if(!ptRef.current) return
+      // Stage 1: window.scrollTo with offsetTop (works when scrollIntoView is blocked on mobile)
+      const top = ptRef.current.getBoundingClientRect().top + window.scrollY - 60
+      window.scrollTo({ top, behavior: 'smooth' })
+      // Stage 2: fallback scrollIntoView after a beat
+      setTimeout(()=>{
+        if(ptRef.current) ptRef.current.scrollIntoView({ behavior:'smooth', block:'start' })
+      }, 400)
+    }
+    const t1 = setTimeout(doScroll, 350)
+    // Final safety net for very slow mobile renders
+    const t2 = setTimeout(()=>{ if(ptRef.current) ptRef.current.scrollIntoView({ behavior:'smooth', block:'start' }) }, 900)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  },[loading, trainerIdParam, planIdParam, sectionParam])
 
   // Scroll to highlighted plan card (offer-linked)
   useEffect(()=>{
     if(loading) return
     if(!highlightId) return
-    const timer = setTimeout(()=>{
-      if(highlightRef.current) highlightRef.current.scrollIntoView({behavior:'smooth',block:'center'})
-    }, 400)
-    return () => clearTimeout(timer)
+    const doScroll = () => {
+      if(!highlightRef.current) return
+      const top = highlightRef.current.getBoundingClientRect().top + window.scrollY - 80
+      window.scrollTo({ top, behavior: 'smooth' })
+      setTimeout(()=>{ if(highlightRef.current) highlightRef.current.scrollIntoView({ behavior:'smooth', block:'center' }) }, 400)
+    }
+    const t1 = setTimeout(doScroll, 450)
+    const t2 = setTimeout(()=>{ if(highlightRef.current) highlightRef.current.scrollIntoView({ behavior:'smooth', block:'center' }) }, 950)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   },[loading, highlightId])
 
   const membershipPlans = plans.filter(p => !p.ptPlan)

@@ -807,17 +807,27 @@ function QRPrintCard({ member, onClose, onNewMember }) {
 }
 
 function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmin=true }) {
-  const [modal,    setModal]    = useState(null)
-  const [search,   setSearch]   = useState('')
-  const [saving,   setSaving]   = useState(false)
-  const [qrMember, setQrMember] = useState(null)
-  const [newMember,setNewMember]= useState(null)   // shown after walk-in registration
+  const [modal,        setModal]        = useState(null)
+  const [search,       setSearch]       = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [qrMember,     setQrMember]     = useState(null)
+  const [newMember,    setNewMember]    = useState(null)   // shown after walk-in registration
+  const [idProofModal, setIdProofModal] = useState(null)  // aadhaar photo lightbox
 
   // Plan period → days map for auto end-date calculation
   const PERIOD_DAYS = { 'Monthly':30, 'Quarterly':91, 'Half Yearly':182, 'Yearly':365 }
 
-  const blank = { name:'', phone:'', email:'', address:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'', aadhaarPhoto:'' }
+  const blank = { name:'', phone:'', email:'', address:'', plan:'', joined:new Date().toISOString().slice(0,10), endDate:'', status:'Active', fee:'Paid', ptPlan:false, scanDays:0, accessEndDate:'', aadhaarPhoto:'', paidAmount:'', remainingAmount:'', nextPaymentDate:'' }
   const [form, setForm] = useState(blank)
+  const [paymentType,    setPaymentType]    = useState('full')   // 'full' | 'partial'
+  const [collectModal,   setCollectModal]   = useState(null)     // member to collect payment from
+  const [collectAmount,  setCollectAmount]  = useState('')
+  const [collectDate,    setCollectDate]    = useState('')
+  const [collectSaving,  setCollectSaving]  = useState(false)
+  const [extendModal,    setExtendModal]    = useState(null)   // member to extend
+  const [extendDate,     setExtendDate]     = useState('')
+  const [extendNote,     setExtendNote]     = useState('')
+  const [extendSaving,   setExtendSaving]   = useState(false)
   const set = (k, v) => {
     setForm(f => {
       const updated = { ...f, [k]: v }
@@ -843,21 +853,65 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
     if (!form.name || !form.phone) { toast('Name and phone are required','err'); return }
     setSaving(true)
     try {
+      // Build submission with partial payment fields
+      const submission = { ...form }
+      if (modal === 'add' && paymentType === 'partial') {
+        const planPrice = parseInt((form.plan||'').replace(/[^\d]/g,'')) || 0
+        const paid = Number(form.paidAmount) || 0
+        const remaining = planPrice > 0 ? Math.max(0, planPrice - paid) : (Number(form.remainingAmount) || 0)
+        submission.fee = 'Partial'
+        submission.paidAmount = paid
+        submission.remainingAmount = remaining
+        submission.nextPaymentDate = form.nextPaymentDate || ''
+      } else if (modal === 'add') {
+        submission.fee = 'Paid'
+        submission.paidAmount = 0
+        submission.remainingAmount = 0
+        submission.nextPaymentDate = ''
+      }
       if (modal === 'add') {
-        const created = await apiFetch('/api/admin/members', 'POST', form)
+        const created = await apiFetch('/api/admin/members', 'POST', submission)
         await reload()
         toast('Member registered! 🎉', 'ok')
         setModal(null)
+        setPaymentType('full')
         // Show QR print card immediately after walk-in registration
-        setNewMember({ ...form, id: created.id || created._id || created._uid })
+        setNewMember({ ...submission, id: created.id || created._id || created._uid })
       } else {
-        await apiFetch(`/api/admin/members/${modal.id}`, 'PUT', form)
+        await apiFetch(`/api/admin/members/${modal.id}`, 'PUT', submission)
         await reload()
         toast('Member updated!', 'ok')
         setModal(null)
       }
     } catch { toast('Save failed', 'err') }
     setSaving(false)
+  }
+
+  const collectPayment = async () => {
+    if (!collectAmount || isNaN(Number(collectAmount))) { toast('Enter a valid amount','err'); return }
+    setCollectSaving(true)
+    try {
+      await apiFetch(`/api/admin/members/${collectModal.id}/partial-payment`, 'POST', {
+        amount: Number(collectAmount),
+        nextPaymentDate: collectDate
+      })
+      await reload()
+      toast('Payment recorded! ✅', 'ok')
+      setCollectModal(null); setCollectAmount(''); setCollectDate('')
+    } catch { toast('Failed to record payment','err') }
+    setCollectSaving(false)
+  }
+
+  const extendMembership = async () => {
+    if (!extendDate) { toast('Select a new end date','err'); return }
+    setExtendSaving(true)
+    try {
+      await apiFetch(`/api/admin/members/${extendModal.id}/extend`, 'POST', { newEndDate: extendDate, note: extendNote })
+      await reload()
+      toast('Membership extended! ✅', 'ok')
+      setExtendModal(null); setExtendDate(''); setExtendNote('')
+    } catch { toast('Failed to extend','err') }
+    setExtendSaving(false)
   }
 
   const del = async id => {
@@ -883,7 +937,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
       </div>
 
       <Card className="adm-table-desktop">
-        <Table heads={['Name','Phone','Plan','Joined','Expires','Status','Fee','Actions']} empty={filtered.length===0?'No members found':''}>
+        <Table heads={['Name','Phone','Plan','Joined','Expires','Status','Fee','Address','ID Proof','Actions']} empty={filtered.length===0?'No members found':''}>
           {filtered.map(m=>(
             <tr key={m.id} className="adm-row">
               <Td style={{fontWeight:500}}>{m.name}</Td>
@@ -896,10 +950,32 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                 {m.ptPlan && m.accessEndDate && <div style={{fontSize:11,color:'#22c55e'}}>Access: {m.accessEndDate}</div>}
               </Td>
               <Td><Badge label={m.status} color={m.status==='Active'?'green':'red'}/></Td>
-              <Td><Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/></Td>
+              <Td>
+                <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                  <Badge label={m.fee==='Partial'?'Partial':m.fee} color={m.fee==='Paid'?'green':m.fee==='Partial'?'orange':'red'}/>
+                  {m.fee==='Partial'&&Number(m.remainingAmount)>0&&<div style={{fontSize:11,color:'#f59e0b'}}>₹{m.remainingAmount} due{m.nextPaymentDate?` · ${m.nextPaymentDate}`:''}</div>}
+                  {m.fee==='Partial'&&Number(m.remainingAmount)>0&&<button onClick={()=>{setCollectModal(m);setCollectAmount('');setCollectDate(m.nextPaymentDate||'')}} style={{fontSize:11,padding:'3px 8px',background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:6,color:'#22c55e',cursor:'pointer'}}>💰 Collect</button>}
+                </div>
+              </Td>
+              <Td style={{fontSize:12,color:'#9d8ec7',maxWidth:160}}>
+                {m.address
+                  ? <span title={m.address}>📍 {m.address.length>28 ? m.address.slice(0,28)+'…' : m.address}</span>
+                  : <span style={{color:'#4b4570'}}>—</span>}
+              </Td>
+              <Td>
+                {m.aadhaarPhoto
+                  ? <button onClick={()=>setIdProofModal(m)} style={{background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.35)',borderRadius:8,padding:'4px 10px',color:'#bb86fc',cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',gap:5}}>
+                      <img src={m.aadhaarPhoto} alt="" style={{width:22,height:15,objectFit:'cover',borderRadius:3,border:'1px solid rgba(124,58,237,0.3)'}}/>
+                      View
+                    </button>
+                  : <span style={{color:'#4b4570',fontSize:12}}>—</span>}
+              </Td>
               <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>🪪 Card</Btn>
+                {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&(
+                  <Btn size="sm" variant="ghost" style={{color:'#f59e0b',borderColor:'rgba(245,158,11,0.4)'}} onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}}>⚡ Extend</Btn>
+                )}
                 {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(m.id)}>Del</Btn>}
               </div></Td>
             </tr>
@@ -920,7 +996,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
                   <Badge label={m.status} color={m.status==='Active'?'green':'red'}/>
-                  <Badge label={m.fee}    color={m.fee==='Paid'?'green':'orange'}/>
+                  <Badge label={m.fee==='Partial'?'Partial':m.fee} color={m.fee==='Paid'?'green':m.fee==='Partial'?'orange':'red'}/>
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12,fontSize:12}}>
@@ -928,11 +1004,19 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                 <div><span style={{color:'#6b6490'}}>Joined: </span><span>{m.joined}</span></div>
                 <div><span style={{color:'#6b6490'}}>Expires: </span><span style={{color:m.endDate&&m.endDate<new Date().toISOString().slice(0,10)?'#ef4444':'#f59e0b'}}>{m.endDate||'—'}</span></div>
                 {m.ptPlan&&<div style={{fontSize:11,color:'#7c3aed',marginTop:2,gridColumn:'1/-1'}}>🏋 PT · {m.scanDays||0} scan days · Access: {m.accessEndDate||'—'}</div>}
-                {m.address&&<div style={{fontSize:12,color:'#6b6490',gridColumn:'1/-1',marginTop:2}}><span style={{color:'#4b4570'}}>📍 </span>{m.address}</div>}
+                {m.address&&<div style={{fontSize:12,color:'#9d8ec7',gridColumn:'1/-1',marginTop:4}}>📍 {m.address}</div>}
+                {m.aadhaarPhoto&&<div style={{gridColumn:'1/-1',marginTop:4}}>
+                  <button onClick={()=>setIdProofModal(m)} style={{background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:8,padding:'5px 12px',color:'#bb86fc',cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',gap:6}}>
+                    <img src={m.aadhaarPhoto} alt="" style={{width:24,height:16,objectFit:'cover',borderRadius:3}}/>
+                    View ID Proof
+                  </button>
+                </div>}
               </div>
-              <div style={{display:'flex',gap:8}}>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                 <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>🪪 Card</Btn>
+                {m.fee==='Partial'&&Number(m.remainingAmount)>0&&<button onClick={()=>{setCollectModal(m);setCollectAmount('');setCollectDate(m.nextPaymentDate||'')}} style={{flex:1,padding:'7px',background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:8,color:'#22c55e',cursor:'pointer',fontSize:12,fontWeight:600}}>💰 ₹{m.remainingAmount} due</button>}
+                {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&<button onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}} style={{flex:1,padding:'7px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:8,color:'#f59e0b',cursor:'pointer',fontSize:12,fontWeight:600}}>⚡ Extend</button>}
                 {isMainAdmin&&<Btn size="sm" variant="danger" onClick={()=>del(m.id)} style={{flex:1,justifyContent:'center'}}>Del</Btn>}
               </div>
             </Card>
@@ -1057,6 +1141,36 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
             </FR>
           </div>
 
+          {/* Payment Type — walk-in registration only */}
+          {modal === 'add' && (
+            <div style={{border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px',marginTop:4}}>
+              <div style={{fontSize:11,color:'#bb86fc',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Payment</div>
+              <div style={{display:'flex',gap:10,marginBottom:paymentType==='partial'?14:0}}>
+                {['full','partial'].map(t=>(
+                  <button key={t} onClick={()=>setPaymentType(t)} style={{flex:1,padding:'9px',borderRadius:9,border:`1px solid ${paymentType===t?'#7c3aed':'rgba(124,58,237,0.25)'}`,background:paymentType===t?'rgba(124,58,237,0.2)':'transparent',color:paymentType===t?'#bb86fc':'#6b6490',cursor:'pointer',fontWeight:paymentType===t?700:400,fontSize:13,transition:'all .2s'}}>
+                    {t==='full'?'✅ Full Payment':'⏳ Partial Payment'}
+                  </button>
+                ))}
+              </div>
+              {paymentType==='partial'&&(
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}}>
+                  <FR label="Amount Paid Now (₹)">
+                    <input style={inp} type="number" min="0" value={form.paidAmount||''} onChange={e=>set('paidAmount',e.target.value)} placeholder="e.g. 500"/>
+                  </FR>
+                  <FR label="Remaining Amount (₹)">
+                    <input style={inp} type="number" min="0" value={form.remainingAmount||''} onChange={e=>set('remainingAmount',e.target.value)} placeholder="e.g. 500"/>
+                  </FR>
+                  <FR label="Next Payment Date" style={{gridColumn:'1/-1'}}>
+                    <input style={inp} type="date" value={form.nextPaymentDate||''} onChange={e=>set('nextPaymentDate',e.target.value)}/>
+                  </FR>
+                  <div style={{gridColumn:'1/-1',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#f59e0b'}}>
+                    ⚠️ Member will be marked as <strong>Partial</strong> — you can collect the remaining balance later from the Members list.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Aadhaar — optional */}
           <div style={{border:'1px solid rgba(124,58,237,0.2)',borderRadius:12,padding:'14px 16px',marginTop:4}}>
             <div style={{fontSize:11,color:'#bb86fc',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>
@@ -1103,6 +1217,76 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
         </Modal>
       )}
 
+      {/* Collect Payment modal */}
+      {collectModal && (
+        <Modal title={`💰 Collect Payment — ${collectModal.name}`} onClose={()=>setCollectModal(null)}>
+          <div style={{marginBottom:16,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10,padding:'12px 14px',fontSize:13}}>
+            <div style={{color:'#f59e0b',fontWeight:600,marginBottom:4}}>Outstanding Balance</div>
+            <div style={{fontSize:22,fontWeight:800,color:'#f0eeff'}}>₹{collectModal.remainingAmount}</div>
+            {collectModal.nextPaymentDate&&<div style={{fontSize:12,color:'#9d8ec7',marginTop:4}}>Expected by: {collectModal.nextPaymentDate}</div>}
+          </div>
+          <FR label="Amount Collecting Now (₹)">
+            <input style={inp} type="number" min="1" max={collectModal.remainingAmount} value={collectAmount} onChange={e=>setCollectAmount(e.target.value)} placeholder={`Max ₹${collectModal.remainingAmount}`} autoFocus/>
+          </FR>
+          {Number(collectAmount) < Number(collectModal.remainingAmount) && collectAmount && (
+            <FR label="Next Payment Date (if still partial)">
+              <input style={inp} type="date" value={collectDate} onChange={e=>setCollectDate(e.target.value)}/>
+            </FR>
+          )}
+          {Number(collectAmount) >= Number(collectModal.remainingAmount) && collectAmount && (
+            <div style={{background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#22c55e',marginBottom:8}}>
+              ✅ Full balance cleared — member will be marked as <strong>Paid</strong>
+            </div>
+          )}
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={collectPayment} disabled={collectSaving} style={{flex:2,justifyContent:'center'}}>
+              {collectSaving?<Spinner/>:'💰 Record Payment'}
+            </Btn>
+            <Btn variant="muted" onClick={()=>setCollectModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Extend Membership modal (main admin only) */}
+      {extendModal && (
+        <Modal title={`⚡ Extend Membership — ${extendModal.name}`} onClose={()=>setExtendModal(null)}>
+          <div style={{marginBottom:16,background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:10,padding:'12px 14px',fontSize:13}}>
+            <div style={{color:'#ef4444',fontWeight:600,marginBottom:4}}>Membership Expired</div>
+            <div style={{color:'#9d8ec7',fontSize:12}}>Expired on: <strong style={{color:'#f0eeff'}}>{extendModal.endDate||'—'}</strong> · Plan: {extendModal.plan}</div>
+          </div>
+          <FR label="New Membership End Date">
+            <input style={inp} type="date" value={extendDate} onChange={e=>setExtendDate(e.target.value)} min={new Date().toISOString().slice(0,10)} autoFocus/>
+          </FR>
+          <FR label="Note (optional)">
+            <input style={inp} value={extendNote} onChange={e=>setExtendNote(e.target.value)} placeholder="e.g. Will pay fee on 20th May"/>
+          </FR>
+          <div style={{background:'rgba(245,158,11,0.07)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#f59e0b',marginBottom:8}}>
+            ⚡ Member will be set to <strong>Active</strong> with the new end date. This action is logged.
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:12}}>
+            <Btn onClick={extendMembership} disabled={extendSaving} style={{flex:2,justifyContent:'center'}}>
+              {extendSaving?<Spinner/>:'⚡ Extend Membership'}
+            </Btn>
+            <Btn variant="muted" onClick={()=>setExtendModal(null)} style={{flex:1,justifyContent:'center'}}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {idProofModal && (
+        <div onClick={()=>setIdProofModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:9999,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,cursor:'pointer'}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#1a1535',borderRadius:16,padding:20,maxWidth:480,width:'100%',border:'1px solid rgba(124,58,237,0.3)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+              <div>
+                <p style={{fontWeight:700,fontSize:15,color:'#f0eeff',margin:0}}>🪪 ID Proof — {idProofModal.name}</p>
+                <p style={{fontSize:12,color:'#6b6490',margin:'4px 0 0'}}>Aadhaar Card Photo</p>
+              </div>
+              <button onClick={()=>setIdProofModal(null)} style={{background:'rgba(239,68,68,0.15)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:8,color:'#ef4444',cursor:'pointer',padding:'5px 12px',fontSize:13}}>✕ Close</button>
+            </div>
+            <img src={idProofModal.aadhaarPhoto} alt="ID Proof" style={{width:'100%',borderRadius:10,objectFit:'contain',maxHeight:320,border:'1px solid rgba(124,58,237,0.2)'}}/>
+            <div style={{marginTop:12,fontSize:12,color:'#6b6490',textAlign:'center'}}>Tap outside or Close to dismiss</div>
+          </div>
+        </div>
+      )}
       {/* Auto-shown after walk-in registration */}
       {newMember && (
         <Modal title="🎉 Registration Complete" onClose={()=>setNewMember(null)} wide>
