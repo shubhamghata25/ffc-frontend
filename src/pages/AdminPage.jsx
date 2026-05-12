@@ -984,7 +984,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   : <span style={{color:'#4b4570',fontSize:12}}>—</span>}
               </Td>
               <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {isMainAdmin&&<Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>}
+                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>🪪 Card</Btn>
                 {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&(
                   <Btn size="sm" variant="ghost" style={{color:'#f59e0b',borderColor:'rgba(245,158,11,0.4)'}} onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}}>⚡ Extend</Btn>
@@ -1026,7 +1026,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                 </div>}
               </div>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                {isMainAdmin&&<Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>}
+                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>🪪 Card</Btn>
                 {m.fee==='Partial'&&Number(m.remainingAmount)>0&&<button onClick={()=>{setCollectModal(m);setCollectAmount('');setCollectDate(m.nextPaymentDate||'')}} style={{flex:1,padding:'7px',background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:8,color:'#22c55e',cursor:'pointer',fontSize:12,fontWeight:600}}>💰 ₹{m.remainingAmount} due</button>}
                 {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&<button onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}} style={{flex:1,padding:'7px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:8,color:'#f59e0b',cursor:'pointer',fontSize:12,fontWeight:600}}>⚡ Extend</button>}
@@ -1788,6 +1788,62 @@ function Trainers({ apiFetch, token, trainers, reload, toast, isMainAdmin=true, 
   )
 }
 
+function PaymentSettingsCard({ apiFetch, inp, Btn, Spinner, FR }) {
+  const [ps, setPs]         = useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg]       = useState(null)
+
+  useEffect(() => {
+    apiFetch('/api/payment-settings').then(d => { if(d) setPs(d) }).catch(()=>{})
+  }, [])
+
+  const toggle = k => setPs(p => ({...p, [k]: !p[k]}))
+
+  const ToggleRow = ({ on, onToggle, label, desc }) => (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 0',borderBottom:'1px solid #2a2347'}}>
+      <div>
+        <div style={{fontWeight:600,fontSize:14}}>{label}</div>
+        {desc&&<div style={{fontSize:12,color:'#6b6490',marginTop:2}}>{desc}</div>}
+      </div>
+      <div onClick={onToggle} style={{width:48,height:26,borderRadius:13,background:on?'#7c3aed':'rgba(255,255,255,0.1)',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0,marginLeft:12}}>
+        <div style={{position:'absolute',top:3,left:on?22:3,width:20,height:20,borderRadius:'50%',background:'#fff',transition:'left .2s'}}/>
+      </div>
+    </div>
+  )
+
+  const save = async () => {
+    setSaving(true); setMsg(null)
+    try {
+      await apiFetch('/api/admin/payment-settings','PUT', ps)
+      setMsg({ok:true, text:'Payment settings saved!'})
+    } catch(e) { setMsg({ok:false, text: e.message||'Failed to save'}) }
+    setSaving(false)
+    setTimeout(()=>setMsg(null), 4000)
+  }
+
+  return (
+    <Card style={{padding:26,border:'1px solid rgba(124,58,237,0.3)'}}>
+      <div style={{fontWeight:700,fontSize:15,color:'#bb86fc',marginBottom:6}}>💳 Payment Settings</div>
+      <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>
+        Control which payment options appear on the Store and Pricing pages.
+      </p>
+      <ToggleRow on={ps.razorpay} onToggle={()=>toggle('razorpay')} label="💳 Razorpay" desc="Card, Net Banking, GPay, PhonePe via Razorpay"/>
+      <ToggleRow on={ps.phonepe}  onToggle={()=>toggle('phonepe')}  label="📱 PhonePe Direct UPI" desc="Direct UPI deep-link — best on mobile"/>
+      <ToggleRow on={ps.gymcash}  onToggle={()=>toggle('gymcash')}  label="🏋 Buy at Gym Counter" desc="Customer pays cash/UPI at the gym"/>
+      <ToggleRow on={ps.whatsapp} onToggle={()=>toggle('whatsapp')} label="💬 WhatsApp Order" desc="Customer sends order via WhatsApp"/>
+      {ps.whatsapp && (
+        <div style={{marginTop:14,marginBottom:4}}>
+          <label style={{fontSize:12,color:'#6b6490',display:'block',marginBottom:6}}>WhatsApp Number (with country code, no +)</label>
+          <input style={{...inp,maxWidth:220}} value={ps.waNumber} onChange={e=>setPs(p=>({...p,waNumber:e.target.value.replace(/\D/g,'')}))} placeholder="918484805154"/>
+          <div style={{fontSize:11,color:'#6b6490',marginTop:4}}>Format: 91XXXXXXXXXX</div>
+        </div>
+      )}
+      {msg&&<div style={{margin:'12px 0',padding:'9px 12px',borderRadius:8,background:msg.ok?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:msg.ok?'#22c55e':'#ef4444',fontSize:13}}>{msg.ok?'✅':'❌'} {msg.text}</div>}
+      <div style={{marginTop:16}}><Btn onClick={save} disabled={saving}>{saving?<Spinner/>:'Save Payment Settings'}</Btn></div>
+    </Card>
+  )
+}
+
 function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onNavigate }) {
   const [saved,setSaved]=useState(false)
   const [syncing,setSyncing]=useState(false)
@@ -1900,6 +1956,7 @@ function Settings({ apiFetch, onLogout, isMainAdmin=true, adminUser='admin', onN
           </p>
           <div style={{marginTop:12,fontSize:12,color:'#7c3aed',fontWeight:600}}>Manage Sub-Admins →</div>
         </Card>}
+        {isMainAdmin&&<PaymentSettingsCard apiFetch={apiFetch} inp={inp} Btn={Btn} Spinner={Spinner} FR={FR}/>}
         <Card style={{padding:26,border:'1px solid rgba(239,68,68,0.25)'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#ef4444',marginBottom:10}}>Danger Zone</div>
           <p style={{fontSize:13,color:'#6b6490',marginBottom:18,lineHeight:1.7}}>{isMainAdmin?'Logging out will end your admin session.':'You are logged in as a staff account. Logging out will end your session.'}</p>

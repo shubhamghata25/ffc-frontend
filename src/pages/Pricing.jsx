@@ -5,7 +5,7 @@ import { useToast, ToastContainer } from '../hooks/useToast.jsx'
 const API = import.meta.env.VITE_API_URL || 'https://ffc-backend-50cu.onrender.com'
 
 /* ─── Payment method modal ─── */
-function PayModal({ plan, onClose, onDone }) {
+function PayModal({ plan, onClose, onDone, paySettings }) {
   const [step, setStep]   = useState('details')   // 'details' | 'method'
   const [paying, setPaying] = useState(false)
   const [form, setForm]   = useState({ name:'', email:'', phone:'', address:'', aadhaar:'' })
@@ -95,6 +95,29 @@ function PayModal({ plan, onClose, onDone }) {
       },
       onFailure: (msg) => { error(msg); setPaying(false) },
     })
+  }
+
+  function payWhatsApp() {
+    const waNum = paySettings?.waNumber || '918484805154'
+    const msg   = encodeURIComponent(`Hi FFC! I want to buy the ${plan.label} Membership for Rs.${plan.price}.\n\nName: ${form.name}\nPhone: ${form.phone}\nAddress: ${form.address||'—'}`)
+    window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank')
+    success('Opening WhatsApp...')
+    onDone?.()
+  }
+
+  function payGymCash() {
+    const API_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
+      ? import.meta.env.VITE_API_URL : 'https://ffc-backend-50cu.onrender.com'
+    fetch(`${API_URL}/api/store/gym-order`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        customerName:form.name, customerPhone:form.phone, customerEmail:form.email||'',
+        address:form.address||'',
+        productName:`${plan.label} Membership`, productPrice:plan.price, itemId:plan.id,
+      })
+    }).catch(()=>{})
+    success('Order noted! Please visit the gym counter to pay.')
+    onDone?.()
   }
 
   return (
@@ -190,23 +213,49 @@ function PayModal({ plan, onClose, onDone }) {
                 Paying as: <strong>{form.name}</strong> · {form.phone}
               </div>
 
-              <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
-                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
-                <div>
-                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Card / Net Banking / UPI</div>
-                  <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — GPay, PhonePe, all cards</div>
-                </div>
-                <div style={{ marginLeft:'auto',color:'#9c59f7',fontSize:18 }}>›</div>
-              </button>
+              {(paySettings?.razorpay!==false)&&(
+                <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
+                  <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
+                  <div>
+                    <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Card / Net Banking / UPI</div>
+                    <div style={{ fontSize:11,color:'#9c59f7' }}>Razorpay — GPay, PhonePe, all cards</div>
+                  </div>
+                  <div style={{ marginLeft:'auto',color:'#9c59f7',fontSize:18 }}>›</div>
+                </button>
+              )}
 
-              <button onClick={payUPI} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(99,102,241,0.08)',border:'2px solid rgba(99,102,241,0.25)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
-                <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#5c35cc,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>📱</div>
-                <div>
-                  <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>UPI / PhonePe Direct</div>
-                  <div style={{ fontSize:11,color:'#818cf8' }}>{isMobile ? 'Opens UPI app directly' : 'Best on mobile'}</div>
-                </div>
-                <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
-              </button>
+              {(paySettings?.phonepe!==false)&&(
+                <button onClick={payUPI} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(99,102,241,0.08)',border:'2px solid rgba(99,102,241,0.25)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
+                  <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#5c35cc,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>📱</div>
+                  <div>
+                    <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>UPI / PhonePe Direct</div>
+                    <div style={{ fontSize:11,color:'#818cf8' }}>{isMobile ? 'Opens UPI app directly' : 'Best on mobile'}</div>
+                  </div>
+                  <div style={{ marginLeft:'auto',color:'#818cf8',fontSize:18 }}>›</div>
+                </button>
+              )}
+
+              {(paySettings?.gymcash)&&(
+                <button onClick={payGymCash} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(245,158,11,0.08)',border:'2px solid rgba(245,158,11,0.3)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
+                  <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#d97706,#f59e0b)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>🏋</div>
+                  <div>
+                    <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Pay at Gym Counter</div>
+                    <div style={{ fontSize:11,color:'#f59e0b' }}>Visit FFC and pay cash / UPI directly</div>
+                  </div>
+                  <div style={{ marginLeft:'auto',color:'#f59e0b',fontSize:18 }}>›</div>
+                </button>
+              )}
+
+              {(paySettings?.whatsapp)&&(
+                <button onClick={payWhatsApp} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(37,211,102,0.08)',border:'2px solid rgba(37,211,102,0.25)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
+                  <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#16a34a,#25d366)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💬</div>
+                  <div>
+                    <div style={{ fontWeight:700,fontSize:14,marginBottom:2 }}>Order via WhatsApp</div>
+                    <div style={{ fontSize:11,color:'#25d366' }}>Message us directly on WhatsApp</div>
+                  </div>
+                  <div style={{ marginLeft:'auto',color:'#25d366',fontSize:18 }}>›</div>
+                </button>
+              )}
 
               <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
                 ← Edit details
@@ -414,9 +463,11 @@ export default function Pricing() {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
   }
   useEffect(loadPlans,[])
+  const [paySettings, setPaySettings] = useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
   useEffect(()=>{
     fetch(`${API}/api/offer`).then(r=>r.json()).then(d=>{ if(d&&d.status==='ON') setOffer(d) }).catch(()=>{})
     fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
+    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{ if(d) setPaySettings(d) }).catch(()=>{})
   },[])
 
   // If offer has linked plan, highlight it. trainerId param also highlights that trainer's plan.
@@ -571,6 +622,7 @@ export default function Pricing() {
           plan={selected}
           onClose={() => setSelected(null)}
           onDone={() => setSelected(null)}
+          paySettings={paySettings}
         />
       )}
     </div>

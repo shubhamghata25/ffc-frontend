@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 
+const API = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
+  ? import.meta.env.VITE_API_URL
+  : 'https://ffc-backend-50cu.onrender.com'
+
 export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, FR, inp, Spinner, Table, Td, Badge, C, toast, isMainAdmin=true }) {
   const [tab, setTab]     = useState('products')
   const [store, setStore] = useState({ categories:[], subcategories:[], products:[] })
@@ -13,6 +17,17 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
   const [orders, setOrders]               = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [orderSearch, setOrderSearch]     = useState('')
+  const [deliveryModal, setDeliveryModal] = useState(null)  // order being updated
+  const [deliveryDate, setDeliveryDate]   = useState('')
+
+  /* Sell-at-gym modal state */
+  const [sellModal, setSellModal]   = useState(null)  // product being sold
+  const [sellForm, setSellForm]     = useState({ name:'', phone:'', address:'', qty:1 })
+  const [sellSaving, setSellSaving] = useState(false)
+
+  /* Payment settings state */
+  const [ps, setPs]       = useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
+  const [psSaving, setPsSaving] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -29,8 +44,14 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     setOrdersLoading(false)
   }, [])
 
+  const loadPaySettings = useCallback(async () => {
+    try { const d = await apiFetch('/api/payment-settings'); setPs(d) }
+    catch {}
+  }, [])
+
   useEffect(() => { load() }, [load])
   useEffect(() => { if (tab === 'orders') loadOrders() }, [tab])
+  useEffect(() => { if (tab === 'payment') loadPaySettings() }, [tab])
 
   const close    = () => { setModal(null); setForm({}) }
   const wrap     = async (fn) => { setSaving(true); try { await fn() } catch { toast('Error saving','err') } setSaving(false) }
@@ -75,6 +96,55 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     await apiFetch(`/api/admin/store/products/${id}`,'DELETE'); await load(); toast('Deleted','ok')
   })
 
+  /* Sell at gym */
+  const doSell = async () => {
+    if (!sellForm.name.trim() || !sellForm.phone.replace(/\D/g,'').length >= 10)
+      return toast('Name and phone required','err')
+    setSellSaving(true)
+    try {
+      const qty = Number(sellForm.qty) || 1
+      await fetch(`${API}/api/store/gym-order`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          customerName:  sellForm.name,
+          customerPhone: sellForm.phone,
+          address:       sellForm.address || '',
+          productName:   sellModal.name,
+          productPrice:  sellModal.price * qty,
+          itemId:        sellModal.id,
+          qty,
+          status:        'paid',
+        }),
+      })
+      toast(`Sale recorded: ${sellModal.name} x${qty} — ₹${sellModal.price * qty}`, 'ok')
+      setSellModal(null); setSellForm({ name:'', phone:'', address:'', qty:1 })
+      if (tab === 'orders') await loadOrders()
+    } catch { toast('Error recording sale','err') }
+    setSellSaving(false)
+  }
+
+  /* Set delivery date */
+  const saveDelivery = async () => {
+    if (!deliveryDate) return toast('Pick a delivery date','err')
+    try {
+      await apiFetch(`/api/admin/orders/${deliveryModal.id || deliveryModal._uid}`,'PUT',{ deliveryDate })
+      toast('Delivery date saved!','ok')
+      setDeliveryModal(null); setDeliveryDate('')
+      await loadOrders()
+    } catch { toast('Failed to save','err') }
+  }
+
+  /* Save payment settings */
+  const savePs = async () => {
+    setPsSaving(true)
+    try {
+      await apiFetch('/api/admin/payment-settings','PUT', ps)
+      toast('Payment settings saved!','ok')
+    } catch { toast('Failed to save','err') }
+    setPsSaving(false)
+  }
+
   const catName = id => (store.categories.find(c=>c.id===id)||{}).name||'—'
   const subName = id => (store.subcategories.find(s=>s.id===id)||{}).name||'—'
   const ph = 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=200'
@@ -92,6 +162,19 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     color: tab===t ? '#fff' : C.muted,
     boxShadow: tab===t ? '0 0 12px rgba(255,60,0,0.3)' : 'none',
   })
+
+  const toggle = (key) => setPs(p => ({...p, [key]: !p[key]}))
+  const ToggleSwitch = ({ on, onChange, label, desc }) => (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:`1px solid ${C.border}` }}>
+      <div>
+        <div style={{ fontWeight:600, fontSize:14 }}>{label}</div>
+        {desc && <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{desc}</div>}
+      </div>
+      <div onClick={onChange} style={{ width:48, height:26, borderRadius:13, background:on?'#7c3aed':'rgba(255,255,255,0.1)', cursor:'pointer', position:'relative', transition:'background .2s', flexShrink:0 }}>
+        <div style={{ position:'absolute', top:3, left:on?22:3, width:20, height:20, borderRadius:'50%', background:'#fff', transition:'left .2s' }}/>
+      </div>
+    </div>
+  )
 
   if (loading) return <div style={{ textAlign:'center',padding:60 }}><Spinner size={32}/></div>
 
@@ -112,7 +195,8 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
         <button style={tabStyle('products')}      onClick={()=>setTab('products')}>🛒 Products ({store.products.length})</button>
         <button style={tabStyle('categories')}    onClick={()=>setTab('categories')}>📁 Categories ({store.categories.length})</button>
         <button style={tabStyle('subcategories')} onClick={()=>setTab('subcategories')}>📂 Subcategories ({store.subcategories.length})</button>
-        <button style={tabStyle('orders')}        onClick={()=>setTab('orders')}>📦 Orders ({orders.length})</button>
+        <button style={tabStyle('orders')}        onClick={()=>setTab('orders')}>📦 Orders</button>
+        {isMainAdmin && <button style={tabStyle('payment')} onClick={()=>setTab('payment')}>💳 Payment Settings</button>}
       </div>
 
       {/* ── PRODUCTS ── */}
@@ -134,8 +218,9 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                   <Td style={{ fontSize:12,color:C.muted }}>{subName(p.subcategoryId)}</Td>
                   <Td style={{ color:C.accent,fontWeight:700 }}>₹{p.price}</Td>
                   <Td><Badge label={p.inStock?'In Stock':'Out'} color={p.inStock?'green':'red'}/></Td>
-                  <Td><div style={{ display:'flex',gap:6 }}>
+                  <Td><div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
                     <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...p,price:String(p.price)}); setModal('editProd') }}>Edit</Btn>
+                    <Btn size="sm" variant="success" onClick={()=>{ setSellModal(p); setSellForm({ name:'', phone:'', address:'', qty:1 }) }}>💰 Sell</Btn>
                     {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delProd(p.id)}>Del</Btn>}
                   </div></Td>
                 </tr>
@@ -170,7 +255,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
       {/* ── SUBCATEGORIES ── */}
       {tab==='subcategories' && (
         <Card>
-          <Table heads={['Image','Name','Category','Products','Actions']} empty={store.subcategories.length===0?'No subcategories yet':''}> 
+          <Table heads={['Image','Name','Category','Products','Actions']} empty={store.subcategories.length===0?'No subcategories yet':''}>
             {store.subcategories.map(sub=>(
               <tr key={sub.id} style={{ borderBottom:`1px solid ${C.border}` }}>
                 <Td><img src={sub.image||ph} alt="" style={{ width:48,height:48,borderRadius:8,objectFit:'cover',background:'#222' }}/></Td>
@@ -188,109 +273,151 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
       )}
 
       {/* ── ORDERS ── */}
-      {tab === 'orders' && (
+      {tab==='orders' && (
         <>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, flexWrap:'wrap', gap:10 }}>
-            <input
-              style={{ ...inp, maxWidth:320 }}
-              placeholder="🔍 Search by name, phone, product…"
-              value={orderSearch}
-              onChange={e=>setOrderSearch(e.target.value)}
-            />
+            <input style={{ ...inp, maxWidth:320 }} placeholder="🔍 Search by name, phone, product…" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)}/>
             <Btn variant="muted" onClick={loadOrders}>↻ Refresh</Btn>
           </div>
           {ordersLoading
-            ? <div style={{ textAlign:'center', padding:60 }}><Spinner size={28}/></div>
+            ? <div style={{ textAlign:'center',padding:60 }}><Spinner size={28}/></div>
             : (() => {
+                const storeTypes = ['store_product','store_cart','gym_purchase']
                 const q = orderSearch.toLowerCase()
-                const filtered = orders.filter(o => {
-                  const m = o.meta || {}
-                  const name  = (m.customerName || m.memberName || '').toLowerCase()
-                  const phone = (m.customerPhone || m.memberPhone || '').toLowerCase()
-                  const items = (m.productName || m.itemName || m.description || '').toLowerCase()
-                  const pid   = (o.paymentId || '').toLowerCase()
-                  return !q || name.includes(q) || phone.includes(q) || items.includes(q) || pid.includes(q)
-                })
-                if (filtered.length === 0) return <p style={{ color:C.muted, padding:40, textAlign:'center' }}>No orders found.</p>
+                const filtered = orders
+                  .filter(o => storeTypes.includes(o.meta?.type))
+                  .filter(o => {
+                    const m = o.meta || {}
+                    const name  = (m.customerName||m.memberName||''  ).toLowerCase()
+                    const phone = (m.customerPhone||m.memberPhone||''  ).toLowerCase()
+                    const items = (m.productName||m.itemName||m.description||''  ).toLowerCase()
+                    const pid   = (o.paymentId||''  ).toLowerCase()
+                    return !q || name.includes(q) || phone.includes(q) || items.includes(q) || pid.includes(q)
+                  })
+                if (filtered.length===0) return <p style={{ color:C.muted, padding:40, textAlign:'center' }}>No store orders found.</p>
                 return (
-                  <>
-                    {/* Desktop table */}
-                    <Card style={{ overflowX:'auto' }}>
-                      <Table
-                        heads={['Date','Customer','Phone','Items','Amount','Type','Status','Payment ID']}
-                        empty=""
-                      >
-                        {filtered.map(o => {
-                          const m   = o.meta || {}
-                          const isCart = m.type === 'store_cart'
-                          const isGym  = m.type === 'gym_purchase'
-                          const name   = m.customerName || m.memberName || '—'
-                          const phone  = m.customerPhone || m.memberPhone || '—'
-                          const items  = isCart
-                            ? (Array.isArray(m.items) ? m.items.map(i=>`${i.name} x${i.qty}`).join(', ') : m.description || '—')
-                            : (m.productName || m.itemName || '—')
-                          const amount = isCart ? m.totalAmount : (m.productPrice || m.planPrice || '—')
-                          const date   = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'
-                          const typeLabel = isGym ? 'Gym/Cash' : isCart ? 'Cart' : 'Online'
-                          const typeColor = isGym ? 'orange' : 'green'
-                          const status = isGym ? (o.status === 'paid' ? 'Paid' : 'Pending') : 'Paid'
-                          const statusColor = status === 'Paid' ? 'green' : 'orange'
-                          return (
-                            <tr key={o.id || o._uid} style={{ borderBottom:`1px solid ${C.border}` }}>
-                              <Td style={{ fontSize:12, color:C.muted, whiteSpace:'nowrap' }}>{date}</Td>
-                              <Td style={{ fontWeight:600 }}>{name}</Td>
-                              <Td style={{ fontSize:13 }}>{phone}</Td>
-                              <Td style={{ fontSize:12, maxWidth:200 }}><div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:200 }} title={items}>{items}</div></Td>
-                              <Td style={{ color:C.accent, fontWeight:700 }}>{amount ? `₹${Number(amount).toLocaleString()}` : '—'}</Td>
-                              <Td><Badge label={typeLabel} color={typeColor}/></Td>
-                              <Td><Badge label={status} color={statusColor}/></Td>
-                              <Td style={{ fontSize:11, color:C.muted }}>{o.paymentId || '—'}</Td>
-                            </tr>
-                          )
-                        })}
-                      </Table>
-                    </Card>
-
-                    {/* Mobile cards */}
-                    <div style={{ display:'none' }} className="order-mobile">
+                  <Card style={{ overflowX:'auto' }}>
+                    <Table heads={['Date','Customer','Phone','Address','Items','Amount','Type','Status','Delivery Date','Payment ID']} empty="">
                       {filtered.map(o => {
                         const m   = o.meta || {}
-                        const isCart = m.type === 'store_cart'
-                        const isGym  = m.type === 'gym_purchase'
-                        const name   = m.customerName || m.memberName || '—'
-                        const phone  = m.customerPhone || m.memberPhone || '—'
+                        const isCart = m.type==='store_cart'
+                        const isGym  = m.type==='gym_purchase'
+                        const name   = m.customerName||m.memberName||'—'
+                        const phone  = m.customerPhone||m.memberPhone||'—'
+                        const addr   = m.address||'—'
                         const items  = isCart
-                          ? (Array.isArray(m.items) ? m.items.map(i=>`${i.name} x${i.qty}`).join(', ') : m.description || '—')
-                          : (m.productName || m.itemName || '—')
-                        const amount = isCart ? m.totalAmount : (m.productPrice || m.planPrice || '—')
+                          ? (Array.isArray(m.items) ? m.items.map(i=>`${i.name} x${i.qty}`).join(', ') : m.description||'—')
+                          : (m.productName||m.itemName||'—')
+                        const amount = isCart ? m.totalAmount : (m.productPrice||m.planPrice||'—')
                         const date   = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'
                         const typeLabel = isGym ? 'Gym/Cash' : isCart ? 'Cart' : 'Online'
-                        const status = isGym ? (o.status === 'paid' ? 'Paid' : 'Pending') : 'Paid'
+                        const typeColor = isGym ? 'orange' : 'green'
+                        const status = (isGym && o.status!=='paid') ? 'Pending' : 'Paid'
+                        const delivDate = m.deliveryDate || '—'
+                        const oid = o.id || o._uid
                         return (
-                          <Card key={o.id || o._uid} style={{ marginBottom:12, padding:18 }}>
-                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
-                              <span style={{ fontWeight:700, fontSize:15 }}>{name}</span>
-                              <Badge label={status} color={status==='Paid'?'green':'orange'}/>
-                            </div>
-                            <div style={{ fontSize:13, color:C.muted, marginBottom:4 }}>{phone} · {date}</div>
-                            <div style={{ fontSize:13, marginBottom:8, lineHeight:1.5 }}>{items}</div>
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                              <span style={{ color:C.accent, fontWeight:700, fontSize:16 }}>{amount ? `₹${Number(amount).toLocaleString()}` : '—'}</span>
-                              <Badge label={typeLabel} color={isGym?'orange':'green'}/>
-                            </div>
-                            {o.paymentId && <div style={{ fontSize:11, color:C.muted, marginTop:6 }}>ID: {o.paymentId}</div>}
-                          </Card>
+                          <tr key={oid} style={{ borderBottom:`1px solid ${C.border}` }}>
+                            <Td style={{ fontSize:12,color:C.muted,whiteSpace:'nowrap' }}>{date}</Td>
+                            <Td style={{ fontWeight:600 }}>{name}</Td>
+                            <Td style={{ fontSize:13 }}>{phone}</Td>
+                            <Td style={{ fontSize:12,color:C.muted,maxWidth:140 }}><div style={{ overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:140 }} title={addr}>{addr}</div></Td>
+                            <Td style={{ fontSize:12,maxWidth:200 }}><div style={{ overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:200 }} title={items}>{items}</div></Td>
+                            <Td style={{ color:C.accent,fontWeight:700 }}>{amount ? `₹${Number(amount).toLocaleString()}` : '—'}</Td>
+                            <Td><Badge label={typeLabel} color={typeColor}/></Td>
+                            <Td><Badge label={status} color={status==='Paid'?'green':'orange'}/></Td>
+                            <Td>
+                              <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                                <span style={{ fontSize:12,color:delivDate==='—'?C.muted:'#22c55e' }}>{delivDate}</span>
+                                <button onClick={()=>{ setDeliveryModal({...o, id:oid}); setDeliveryDate(m.deliveryDate||'') }}
+                                  style={{ background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:6,color:'#bb86fc',cursor:'pointer',fontSize:11,padding:'3px 8px' }}>
+                                  {delivDate==='—'?'Set':'Edit'}
+                                </button>
+                              </div>
+                            </Td>
+                            <Td style={{ fontSize:11,color:C.muted }}>{o.paymentId||'—'}</Td>
+                          </tr>
                         )
                       })}
-                    </div>
-                  </>
+                    </Table>
+                  </Card>
                 )
               })()
           }
         </>
       )}
 
+      {/* ── PAYMENT SETTINGS (main admin only) ── */}
+      {tab==='payment' && isMainAdmin && (
+        <div style={{ maxWidth:560 }}>
+          <Card style={{ padding:26 }}>
+            <div style={{ fontWeight:700,fontSize:16,color:'#bb86fc',marginBottom:6 }}>💳 Payment Gateway Settings</div>
+            <div style={{ fontSize:13,color:C.muted,marginBottom:20 }}>Choose which payment options appear on the Store and Pricing pages.</div>
+            <ToggleSwitch on={ps.razorpay} onChange={()=>toggle('razorpay')} label="💳 Razorpay" desc="Card, Net Banking, GPay, PhonePe via Razorpay"/>
+            <ToggleSwitch on={ps.phonepe}  onChange={()=>toggle('phonepe')}  label="📱 PhonePe Direct UPI" desc="Direct UPI deep-link — best on mobile"/>
+            <ToggleSwitch on={ps.gymcash}  onChange={()=>toggle('gymcash')}  label="🏋 Buy at Gym Counter" desc="Customer pays cash or UPI at the gym"/>
+            <ToggleSwitch on={ps.whatsapp} onChange={()=>toggle('whatsapp')} label="💬 WhatsApp Order" desc="Opens pre-filled WhatsApp message to gym number"/>
+            {ps.whatsapp && (
+              <div style={{ marginTop:14 }}>
+                <label style={{ fontSize:12,color:C.muted,display:'block',marginBottom:6 }}>WhatsApp Number (with country code, no +)</label>
+                <input
+                  style={{ ...inp, maxWidth:240 }}
+                  value={ps.waNumber}
+                  onChange={e=>setPs(p=>({...p, waNumber:e.target.value.replace(/\D/g,''  )}))}
+                  placeholder="918484805154"
+                />
+                <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>Format: 91XXXXXXXXXX (India)</div>
+              </div>
+            )}
+            <div style={{ marginTop:22 }}>
+              <Btn onClick={savePs} disabled={psSaving}>{psSaving?<Spinner/>:'Save Settings'}</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* ═══ MODALS ═══ */}
+
+      {/* Sell at Gym Modal */}
+      {sellModal && (
+        <Modal title={`💰 Sell: ${sellModal.name}`} onClose={()=>setSellModal(null)}>
+          <div style={{ background:'rgba(124,58,237,0.08)',border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:16 }}>
+            <div style={{ fontWeight:700,fontSize:15 }}>{sellModal.name}</div>
+            <div style={{ color:C.accent,fontWeight:800,fontSize:20,marginTop:2 }}>₹{sellModal.price} <span style={{ fontSize:13,color:C.muted,fontWeight:400 }}>per unit</span></div>
+          </div>
+          <FR label="Customer Name *">
+            <input style={inp} value={sellForm.name} onChange={e=>setSellForm(f=>({...f,name:e.target.value}))} placeholder="Rahul Sharma"/>
+          </FR>
+          <FR label="Phone Number *">
+            <input style={inp} type="tel" value={sellForm.phone} onChange={e=>setSellForm(f=>({...f,phone:e.target.value}))} placeholder="10-digit mobile"/>
+          </FR>
+          <FR label="Address (optional)">
+            <input style={inp} value={sellForm.address} onChange={e=>setSellForm(f=>({...f,address:e.target.value}))} placeholder="Customer address"/>
+          </FR>
+          <FR label="Quantity">
+            <input style={{ ...inp,maxWidth:100 }} type="number" min="1" value={sellForm.qty} onChange={e=>setSellForm(f=>({...f,qty:Math.max(1,Number(e.target.value))}))}/>
+          </FR>
+          <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:14 }}>
+            Total: <strong style={{ color:'#22c55e',fontSize:16 }}>₹{sellModal.price * sellForm.qty}</strong>
+          </div>
+          <div style={{ display:'flex',gap:10 }}>
+            <Btn onClick={doSell} disabled={sellSaving} style={{ flex:1,justifyContent:'center' }}>{sellSaving?<Spinner/>:'✅ Confirm Sale (Cash Collected)'}</Btn>
+            <Btn variant="muted" onClick={()=>setSellModal(null)} style={{ flex:1,justifyContent:'center' }}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delivery Date Modal */}
+      {deliveryModal && (
+        <Modal title="📦 Set Delivery Date" onClose={()=>setDeliveryModal(null)}>
+          <FR label="Delivery Date">
+            <input style={inp} type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)}/>
+          </FR>
+          <div style={{ display:'flex',gap:10,marginTop:8 }}>
+            <Btn onClick={saveDelivery} style={{ flex:1,justifyContent:'center' }}>Save</Btn>
+            <Btn variant="muted" onClick={()=>setDeliveryModal(null)} style={{ flex:1,justifyContent:'center' }}>Cancel</Btn>
+          </div>
+        </Modal>
+      )}
 
       {(modal==='addCat'||modal==='editCat') && (
         <Modal title={modal==='addCat'?'Add Category':'Edit Category'} onClose={close}>

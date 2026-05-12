@@ -37,10 +37,12 @@ export default function Store() {
   const cartRef=useRef(null)
   const {cart,add,remove,clear,total,count}=useCart()
   const {toasts,success,error,info}=useToast()
+  const [paySettings, setPaySettings]=useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
 
   useEffect(()=>{
     fetch(`${API}/api/store`).then(r=>r.json())
       .then(d=>{setStoreData(d);setLoading(false)}).catch(()=>setLoading(false))
+    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{if(d)setPaySettings(d)}).catch(()=>{})
   },[])
 
   /* close cart when clicking outside */
@@ -113,38 +115,30 @@ export default function Store() {
     })
   }
 
-  async function doGymPurchase(product, customer) {
+  async function doGymPurchase(product, customer){
     setGymPurchaseLoading(true)
     try {
       const isCart = !product
-      const payload = {
-        type: 'gym_purchase',
-        customerName:  customer.name,
-        customerPhone: customer.phone,
-        customerEmail: customer.email || '',
-        address:       customer.address || '',
-      }
-      if (isCart) {
-        payload.items       = cart.map(i=>({id:i.id, name:i.name, qty:i.qty, price:i.price}))
-        payload.totalAmount = cart.reduce((s,i)=>s+i.price*i.qty, 0)
-        payload.description = cart.map(i=>`${i.name} x${i.qty}`).join(', ')
-      } else {
-        payload.productName  = product.name
-        payload.productPrice = product.price
-        payload.itemId       = product.id
-      }
-      const res = await fetch(`${API}/api/store/gym-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Server error')
-      success(`Order noted! Show this to the gym counter to pay. Name: ${customer.name}`)
-      if (isCart) clear()
-    } catch(e) {
-      error('Could not place gym order. Please try again or contact the gym.')
-    }
+      const payload = { customerName:customer.name, customerPhone:customer.phone, customerEmail:customer.email||'', address:customer.address||'' }
+      if(isCart){ payload.items=cart.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})); payload.totalAmount=cart.reduce((s,i)=>s+i.price*i.qty,0); payload.description=cart.map(i=>`${i.name} x${i.qty}`).join(', ') }
+      else { payload.productName=product.name; payload.productPrice=product.price; payload.itemId=product.id }
+      const res=await fetch(`${API}/api/store/gym-order`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      if(!res.ok) throw new Error()
+      success(`Order noted! Show your name & phone at the gym counter to pay.`)
+      if(isCart) clear()
+    } catch { error('Could not place order. Please contact the gym.') }
     setGymPurchaseLoading(false)
+  }
+
+  function doWhatsApp(product, customer){
+    const isCart = !product
+    const waNum  = paySettings.waNumber || '918484805154'
+    const items  = isCart ? cart.map(i=>`${i.name} x${i.qty} (₹${i.price*i.qty})`).join(', ') : `${product.name} (₹${product.price})`
+    const total  = isCart ? `₹${cart.reduce((s,i)=>s+i.price*i.qty,0)}` : `₹${product.price}`
+    const msg    = encodeURIComponent(`Hi FFC! I want to order:\n${items}\nTotal: ${total}\n\nName: ${customer.name}\nPhone: ${customer.phone}\nAddress: ${customer.address||'—'}`)
+    window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank')
+    success('Opening WhatsApp...')
+    if(isCart) clear()
   }
 
   async function handleCartCheckout(customer){
@@ -402,16 +396,18 @@ export default function Store() {
               {/* Payment buttons */}
               {customerValid ? (
                 <div style={{display:'flex',flexDirection:'column',gap:9}}>
-                  <button onClick={()=>{ isCart ? handleCartCheckout(storeCustomer) : doRazorpay(payProduct, storeCustomer); close() }}
-                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
-                    <span style={{fontSize:20}}>💳</span>
-                    <div style={{textAlign:'left'}}>
-                      <div>Card / Net Banking / UPI</div>
-                      <div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>Razorpay — GPay, PhonePe, all banks · <span style={{color:'#f59e0b'}}>+2% processing fee</span></div>
-                    </div>
-                    <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
-                  </button>
-                  {!isCart && (
+                  {paySettings.razorpay&&(
+                    <button onClick={()=>{ isCart ? handleCartCheckout(storeCustomer) : doRazorpay(payProduct, storeCustomer); close() }}
+                      style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                      <span style={{fontSize:20}}>💳</span>
+                      <div style={{textAlign:'left'}}>
+                        <div>Card / Net Banking / UPI</div>
+                        <div style={{fontSize:11,color:'#9c59f7',fontWeight:400}}>Razorpay — GPay, PhonePe, all banks · <span style={{color:'#f59e0b'}}>+2% processing fee</span></div>
+                      </div>
+                      <span style={{marginLeft:'auto',color:'#9c59f7'}}>›</span>
+                    </button>
+                  )}
+                  {paySettings.phonepe&&!isCart&&(
                     <button onClick={()=>{ doUPI(payProduct, storeCustomer); close() }}
                       style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(99,102,241,0.08)',border:'1.5px solid rgba(99,102,241,0.25)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
                       <span style={{fontSize:20}}>📱</span>
@@ -419,17 +415,28 @@ export default function Store() {
                       <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
                     </button>
                   )}
-                  <button
-                    onClick={()=>{ doGymPurchase(isCart ? null : payProduct, storeCustomer); close() }}
-                    disabled={gymPurchaseLoading}
-                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.3)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%',opacity:gymPurchaseLoading?0.6:1}}>
-                    <span style={{fontSize:20}}>🏋</span>
-                    <div style={{textAlign:'left'}}>
-                      <div>Buy at Gym Counter</div>
-                      <div style={{fontSize:11,color:'#f59e0b',fontWeight:400}}>Pay cash / UPI directly at FFC · No online fee</div>
-                    </div>
-                    <span style={{marginLeft:'auto',color:'#f59e0b'}}>›</span>
-                  </button>
+                  {paySettings.gymcash&&(
+                    <button onClick={()=>{ doGymPurchase(isCart?null:payProduct, storeCustomer); close() }} disabled={gymPurchaseLoading}
+                      style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.3)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%',opacity:gymPurchaseLoading?0.6:1}}>
+                      <span style={{fontSize:20}}>🏋</span>
+                      <div style={{textAlign:'left'}}>
+                        <div>Buy at Gym Counter</div>
+                        <div style={{fontSize:11,color:'#f59e0b',fontWeight:400}}>Pay cash / UPI at FFC · No online fee</div>
+                      </div>
+                      <span style={{marginLeft:'auto',color:'#f59e0b'}}>›</span>
+                    </button>
+                  )}
+                  {paySettings.whatsapp&&(
+                    <button onClick={()=>{ doWhatsApp(isCart?null:payProduct, storeCustomer); close() }}
+                      style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(37,211,102,0.08)',border:'1.5px solid rgba(37,211,102,0.3)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>
+                      <span style={{fontSize:20}}>💬</span>
+                      <div style={{textAlign:'left'}}>
+                        <div>Order via WhatsApp</div>
+                        <div style={{fontSize:11,color:'#25d366',fontWeight:400}}>Message us directly to confirm your order</div>
+                      </div>
+                      <span style={{marginLeft:'auto',color:'#25d366'}}>›</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name, phone and address to continue</p>
