@@ -852,7 +852,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
 
   // Partial payment: reactive computed values (outside JSX so they update on every render)
   const selPlan     = plans.find(p => p.label === form.plan)
-  const planPrice   = Number(selPlan?.price) || Number(selPlan?.effectivePrice) || 0
+  const planPrice   = Number(selPlan?.effectivePrice) || Number(selPlan?.price) || 0
   const partialPaid = Number(form.paidAmount) || 0
   const partialRem  = planPrice > 0 ? Math.max(0, planPrice - partialPaid) : null
   const today       = new Date()
