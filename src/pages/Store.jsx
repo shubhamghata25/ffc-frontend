@@ -37,12 +37,12 @@ export default function Store() {
   const cartRef=useRef(null)
   const {cart,add,remove,clear,total,count}=useCart()
   const {toasts,success,error,info}=useToast()
-  const [paySettings, setPaySettings]=useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
+  const [paySettings, setPaySettings]=useState(null)  // null = loading, wait before showing buttons
 
   useEffect(()=>{
     fetch(`${API}/api/store`).then(r=>r.json())
       .then(d=>{setStoreData(d);setLoading(false)}).catch(()=>setLoading(false))
-    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{if(d)setPaySettings(d)}).catch(()=>{})
+    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{ setPaySettings(d && typeof d==='object' ? d : { razorpay:false,phonepe:false,gymcash:false,whatsapp:false,waNumber:'918484805154' }) }).catch(()=>{ setPaySettings({ razorpay:true,phonepe:true,gymcash:false,whatsapp:false,waNumber:'918484805154' }) })
   },[])
 
   /* close cart when clicking outside */
@@ -395,7 +395,9 @@ export default function Store() {
               </div>
               {/* Payment buttons */}
               {customerValid ? (
-                <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                paySettings === null
+                  ? <div style={{textAlign:'center',padding:'18px 0',color:'#6b6490',fontSize:13}}>Loading payment options…</div>
+                  : <div style={{display:'flex',flexDirection:'column',gap:9}}>
                   {paySettings.razorpay&&(
                     <button onClick={()=>{ isCart ? handleCartCheckout(storeCustomer) : doRazorpay(payProduct, storeCustomer); close() }}
                       style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(124,58,237,0.12)',border:'1.5px solid rgba(124,58,237,0.35)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%'}}>

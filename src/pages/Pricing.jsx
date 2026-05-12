@@ -213,7 +213,11 @@ function PayModal({ plan, onClose, onDone, paySettings }) {
                 Paying as: <strong>{form.name}</strong> · {form.phone}
               </div>
 
-              {(paySettings?.razorpay!==false)&&(
+              {paySettings === null
+                ? <div style={{textAlign:'center',padding:'18px 0',color:'#6b6490',fontSize:13}}>Loading payment options…</div>
+                : <>
+
+              {paySettings.razorpay&&(
                 <button onClick={payRazorpay} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:paying?'rgba(124,58,237,0.2)':'rgba(124,58,237,0.12)',border:'2px solid rgba(124,58,237,0.35)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
                   <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#9c59f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💳</div>
                   <div>
@@ -224,7 +228,7 @@ function PayModal({ plan, onClose, onDone, paySettings }) {
                 </button>
               )}
 
-              {(paySettings?.phonepe!==false)&&(
+              {paySettings.phonepe&&(
                 <button onClick={payUPI} disabled={paying} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(99,102,241,0.08)',border:'2px solid rgba(99,102,241,0.25)',borderRadius:14,cursor:paying?'not-allowed':'pointer',textAlign:'left',color:'#f0eeff',width:'100%',opacity:paying?0.7:1 }}>
                   <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#5c35cc,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>📱</div>
                   <div>
@@ -235,7 +239,7 @@ function PayModal({ plan, onClose, onDone, paySettings }) {
                 </button>
               )}
 
-              {(paySettings?.gymcash)&&(
+              {paySettings.gymcash&&(
                 <button onClick={payGymCash} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(245,158,11,0.08)',border:'2px solid rgba(245,158,11,0.3)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
                   <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#d97706,#f59e0b)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>🏋</div>
                   <div>
@@ -246,7 +250,7 @@ function PayModal({ plan, onClose, onDone, paySettings }) {
                 </button>
               )}
 
-              {(paySettings?.whatsapp)&&(
+              {paySettings.whatsapp&&(
                 <button onClick={payWhatsApp} style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:'rgba(37,211,102,0.08)',border:'2px solid rgba(37,211,102,0.25)',borderRadius:14,cursor:'pointer',textAlign:'left',color:'#f0eeff',width:'100%' }}>
                   <div style={{ width:44,height:44,borderRadius:10,background:'linear-gradient(135deg,#16a34a,#25d366)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>💬</div>
                   <div>
@@ -256,6 +260,8 @@ function PayModal({ plan, onClose, onDone, paySettings }) {
                   <div style={{ marginLeft:'auto',color:'#25d366',fontSize:18 }}>›</div>
                 </button>
               )}
+
+              </>}
 
               <button onClick={()=>setStep('details')} style={{ background:'none',border:'none',color:'#6b6490',fontSize:12,cursor:'pointer',padding:'4px',textDecoration:'underline',textAlign:'center' }}>
                 ← Edit details
@@ -463,11 +469,11 @@ export default function Pricing() {
     fetch(`${API}/api/plans`).then(r=>r.json()).then(d=>{ setPlans(d); setLoading(false) }).catch(()=>setLoading(false))
   }
   useEffect(loadPlans,[])
-  const [paySettings, setPaySettings] = useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
+  const [paySettings, setPaySettings] = useState(null)  // null until fetched
   useEffect(()=>{
     fetch(`${API}/api/offer`).then(r=>r.json()).then(d=>{ if(d&&d.status==='ON') setOffer(d) }).catch(()=>{})
     fetch(`${API}/api/trainers`).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setTrainers(d) }).catch(()=>{})
-    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{ if(d) setPaySettings(d) }).catch(()=>{})
+    fetch(`${API}/api/payment-settings`).then(r=>r.json()).then(d=>{ setPaySettings(d && typeof d==='object' ? d : { razorpay:false,phonepe:false,gymcash:false,whatsapp:false,waNumber:'918484805154' }) }).catch(()=>{ setPaySettings({ razorpay:true,phonepe:true,gymcash:false,whatsapp:false,waNumber:'918484805154' }) })
   },[])
 
   // If offer has linked plan, highlight it. trainerId param also highlights that trainer's plan.
