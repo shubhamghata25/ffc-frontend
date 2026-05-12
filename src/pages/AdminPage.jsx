@@ -984,7 +984,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                   : <span style={{color:'#4b4570',fontSize:12}}>—</span>}
               </Td>
               <Td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>
+                {isMainAdmin&&<Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m,ptPlan:!!m.ptPlan,scanDays:m.scanDays||0,accessEndDate:m.accessEndDate||''});setModal(m)}}>Edit</Btn>}
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)}>🪪 Card</Btn>
                 {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&(
                   <Btn size="sm" variant="ghost" style={{color:'#f59e0b',borderColor:'rgba(245,158,11,0.4)'}} onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}}>⚡ Extend</Btn>
@@ -1026,7 +1026,7 @@ function Members({ apiFetch, token, members, reload, toast, plans=[], isMainAdmi
                 </div>}
               </div>
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                <Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>
+                {isMainAdmin&&<Btn size="sm" variant="ghost"  onClick={()=>{setForm({...m});setModal(m)}} style={{flex:1,justifyContent:'center'}}>Edit</Btn>}
                 <Btn size="sm" variant="muted"  onClick={()=>setQrMember(m)} style={{flex:1,justifyContent:'center'}}>🪪 Card</Btn>
                 {m.fee==='Partial'&&Number(m.remainingAmount)>0&&<button onClick={()=>{setCollectModal(m);setCollectAmount('');setCollectDate(m.nextPaymentDate||'')}} style={{flex:1,padding:'7px',background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:8,color:'#22c55e',cursor:'pointer',fontSize:12,fontWeight:600}}>💰 ₹{m.remainingAmount} due</button>}
                 {isMainAdmin&&m.endDate&&m.endDate<new Date().toISOString().slice(0,10)&&<button onClick={()=>{setExtendModal(m);setExtendDate('');setExtendNote('')}} style={{flex:1,padding:'7px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:8,color:'#f59e0b',cursor:'pointer',fontSize:12,fontWeight:600}}>⚡ Extend</button>}

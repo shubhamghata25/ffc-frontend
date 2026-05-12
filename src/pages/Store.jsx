@@ -77,6 +77,7 @@ export default function Store() {
   const [storeCustomer, setStoreCustomer] = useState({ name:'', email:'', phone:'', address:'' })
   const [showCustomerForm, setShowCustomerForm] = useState(null) // 'product'|'cart'
   const [pendingProduct, setPendingProduct] = useState(null)
+  const [gymPurchaseLoading, setGymPurchaseLoading] = useState(false)
   const setC = (k,v) => setStoreCustomer(f=>({...f,[k]:v}))
   const customerValid = storeCustomer.name.trim().length>1 && storeCustomer.phone.replace(/\D/g,'').length>=10 && storeCustomer.address.trim().length>5
 
@@ -110,6 +111,40 @@ export default function Store() {
       onSuccess: ()=> success('UPI payment initiated! Share screenshot at the gym to confirm.'),
       onFailure: (msg)=> error(msg),
     })
+  }
+
+  async function doGymPurchase(product, customer) {
+    setGymPurchaseLoading(true)
+    try {
+      const isCart = !product
+      const payload = {
+        type: 'gym_purchase',
+        customerName:  customer.name,
+        customerPhone: customer.phone,
+        customerEmail: customer.email || '',
+        address:       customer.address || '',
+      }
+      if (isCart) {
+        payload.items       = cart.map(i=>({id:i.id, name:i.name, qty:i.qty, price:i.price}))
+        payload.totalAmount = cart.reduce((s,i)=>s+i.price*i.qty, 0)
+        payload.description = cart.map(i=>`${i.name} x${i.qty}`).join(', ')
+      } else {
+        payload.productName  = product.name
+        payload.productPrice = product.price
+        payload.itemId       = product.id
+      }
+      const res = await fetch(`${API}/api/store/gym-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Server error')
+      success(`Order noted! Show this to the gym counter to pay. Name: ${customer.name}`)
+      if (isCart) clear()
+    } catch(e) {
+      error('Could not place gym order. Please try again or contact the gym.')
+    }
+    setGymPurchaseLoading(false)
   }
 
   async function handleCartCheckout(customer){
@@ -384,6 +419,17 @@ export default function Store() {
                       <span style={{marginLeft:'auto',color:'#818cf8'}}>›</span>
                     </button>
                   )}
+                  <button
+                    onClick={()=>{ doGymPurchase(isCart ? null : payProduct, storeCustomer); close() }}
+                    disabled={gymPurchaseLoading}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',background:'rgba(245,158,11,0.08)',border:'1.5px solid rgba(245,158,11,0.3)',borderRadius:12,cursor:'pointer',color:'#f0eeff',fontSize:14,fontWeight:600,fontFamily:"'Poppins',sans-serif",width:'100%',opacity:gymPurchaseLoading?0.6:1}}>
+                    <span style={{fontSize:20}}>🏋</span>
+                    <div style={{textAlign:'left'}}>
+                      <div>Buy at Gym Counter</div>
+                      <div style={{fontSize:11,color:'#f59e0b',fontWeight:400}}>Pay cash / UPI directly at FFC · No online fee</div>
+                    </div>
+                    <span style={{marginLeft:'auto',color:'#f59e0b'}}>›</span>
+                  </button>
                 </div>
               ) : (
                 <p style={{textAlign:'center',fontSize:12,color:'#6b6490',padding:'8px 0'}}>Please fill your name, phone and address to continue</p>

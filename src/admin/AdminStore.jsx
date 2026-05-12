@@ -9,6 +9,11 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
   const [saving, setSaving] = useState(false)
   const [searchProd, setSearchProd] = useState('')
 
+  /* Orders state */
+  const [orders, setOrders]               = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [orderSearch, setOrderSearch]     = useState('')
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const load = useCallback(async () => {
@@ -17,7 +22,15 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     setLoading(false)
   }, [])
 
+  const loadOrders = useCallback(async () => {
+    setOrdersLoading(true)
+    try { const d = await apiFetch('/api/admin/orders'); setOrders(Array.isArray(d) ? d : []) }
+    catch { toast('Failed to load orders', 'err') }
+    setOrdersLoading(false)
+  }, [])
+
   useEffect(() => { load() }, [load])
+  useEffect(() => { if (tab === 'orders') loadOrders() }, [tab])
 
   const close    = () => { setModal(null); setForm({}) }
   const wrap     = async (fn) => { setSaving(true); try { await fn() } catch { toast('Error saving','err') } setSaving(false) }
@@ -99,6 +112,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
         <button style={tabStyle('products')}      onClick={()=>setTab('products')}>🛒 Products ({store.products.length})</button>
         <button style={tabStyle('categories')}    onClick={()=>setTab('categories')}>📁 Categories ({store.categories.length})</button>
         <button style={tabStyle('subcategories')} onClick={()=>setTab('subcategories')}>📂 Subcategories ({store.subcategories.length})</button>
+        <button style={tabStyle('orders')}        onClick={()=>setTab('orders')}>📦 Orders ({orders.length})</button>
       </div>
 
       {/* ── PRODUCTS ── */}
@@ -171,6 +185,109 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
             ))}
           </Table>
         </Card>
+      )}
+
+      {/* ── ORDERS ── */}
+      {tab === 'orders' && (
+        <>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, flexWrap:'wrap', gap:10 }}>
+            <input
+              style={{ ...inp, maxWidth:320 }}
+              placeholder="🔍 Search by name, phone, product…"
+              value={orderSearch}
+              onChange={e=>setOrderSearch(e.target.value)}
+            />
+            <Btn variant="muted" onClick={loadOrders}>↻ Refresh</Btn>
+          </div>
+          {ordersLoading
+            ? <div style={{ textAlign:'center', padding:60 }}><Spinner size={28}/></div>
+            : (() => {
+                const q = orderSearch.toLowerCase()
+                const filtered = orders.filter(o => {
+                  const m = o.meta || {}
+                  const name  = (m.customerName || m.memberName || '').toLowerCase()
+                  const phone = (m.customerPhone || m.memberPhone || '').toLowerCase()
+                  const items = (m.productName || m.itemName || m.description || '').toLowerCase()
+                  const pid   = (o.paymentId || '').toLowerCase()
+                  return !q || name.includes(q) || phone.includes(q) || items.includes(q) || pid.includes(q)
+                })
+                if (filtered.length === 0) return <p style={{ color:C.muted, padding:40, textAlign:'center' }}>No orders found.</p>
+                return (
+                  <>
+                    {/* Desktop table */}
+                    <Card style={{ overflowX:'auto' }}>
+                      <Table
+                        heads={['Date','Customer','Phone','Items','Amount','Type','Status','Payment ID']}
+                        empty=""
+                      >
+                        {filtered.map(o => {
+                          const m   = o.meta || {}
+                          const isCart = m.type === 'store_cart'
+                          const isGym  = m.type === 'gym_purchase'
+                          const name   = m.customerName || m.memberName || '—'
+                          const phone  = m.customerPhone || m.memberPhone || '—'
+                          const items  = isCart
+                            ? (Array.isArray(m.items) ? m.items.map(i=>`${i.name} x${i.qty}`).join(', ') : m.description || '—')
+                            : (m.productName || m.itemName || '—')
+                          const amount = isCart ? m.totalAmount : (m.productPrice || m.planPrice || '—')
+                          const date   = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'
+                          const typeLabel = isGym ? 'Gym/Cash' : isCart ? 'Cart' : 'Online'
+                          const typeColor = isGym ? 'orange' : 'green'
+                          const status = isGym ? (o.status === 'paid' ? 'Paid' : 'Pending') : 'Paid'
+                          const statusColor = status === 'Paid' ? 'green' : 'orange'
+                          return (
+                            <tr key={o.id || o._uid} style={{ borderBottom:`1px solid ${C.border}` }}>
+                              <Td style={{ fontSize:12, color:C.muted, whiteSpace:'nowrap' }}>{date}</Td>
+                              <Td style={{ fontWeight:600 }}>{name}</Td>
+                              <Td style={{ fontSize:13 }}>{phone}</Td>
+                              <Td style={{ fontSize:12, maxWidth:200 }}><div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:200 }} title={items}>{items}</div></Td>
+                              <Td style={{ color:C.accent, fontWeight:700 }}>{amount ? `₹${Number(amount).toLocaleString()}` : '—'}</Td>
+                              <Td><Badge label={typeLabel} color={typeColor}/></Td>
+                              <Td><Badge label={status} color={statusColor}/></Td>
+                              <Td style={{ fontSize:11, color:C.muted }}>{o.paymentId || '—'}</Td>
+                            </tr>
+                          )
+                        })}
+                      </Table>
+                    </Card>
+
+                    {/* Mobile cards */}
+                    <div style={{ display:'none' }} className="order-mobile">
+                      {filtered.map(o => {
+                        const m   = o.meta || {}
+                        const isCart = m.type === 'store_cart'
+                        const isGym  = m.type === 'gym_purchase'
+                        const name   = m.customerName || m.memberName || '—'
+                        const phone  = m.customerPhone || m.memberPhone || '—'
+                        const items  = isCart
+                          ? (Array.isArray(m.items) ? m.items.map(i=>`${i.name} x${i.qty}`).join(', ') : m.description || '—')
+                          : (m.productName || m.itemName || '—')
+                        const amount = isCart ? m.totalAmount : (m.productPrice || m.planPrice || '—')
+                        const date   = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'
+                        const typeLabel = isGym ? 'Gym/Cash' : isCart ? 'Cart' : 'Online'
+                        const status = isGym ? (o.status === 'paid' ? 'Paid' : 'Pending') : 'Paid'
+                        return (
+                          <Card key={o.id || o._uid} style={{ marginBottom:12, padding:18 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                              <span style={{ fontWeight:700, fontSize:15 }}>{name}</span>
+                              <Badge label={status} color={status==='Paid'?'green':'orange'}/>
+                            </div>
+                            <div style={{ fontSize:13, color:C.muted, marginBottom:4 }}>{phone} · {date}</div>
+                            <div style={{ fontSize:13, marginBottom:8, lineHeight:1.5 }}>{items}</div>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                              <span style={{ color:C.accent, fontWeight:700, fontSize:16 }}>{amount ? `₹${Number(amount).toLocaleString()}` : '—'}</span>
+                              <Badge label={typeLabel} color={isGym?'orange':'green'}/>
+                            </div>
+                            {o.paymentId && <div style={{ fontSize:11, color:C.muted, marginTop:6 }}>ID: {o.paymentId}</div>}
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()
+          }
+        </>
       )}
 
       {/* ═══ MODALS ═══ */}
