@@ -24,10 +24,9 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
   const [sellModal, setSellModal]   = useState(null)  // product being sold
   const [sellForm, setSellForm]     = useState({ name:'', phone:'', address:'', qty:1 })
   const [sellSaving, setSellSaving] = useState(false)
+  const [sellSubModal, setSellSubModal] = useState(null)  // subcategory for browsing
+  const [sellSelectedProd, setSellSelectedProd] = useState(null)
 
-  /* Payment settings state */
-  const [ps, setPs]       = useState({ razorpay:true, phonepe:true, gymcash:true, whatsapp:false, waNumber:'918484805154' })
-  const [psSaving, setPsSaving] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -44,14 +43,9 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     setOrdersLoading(false)
   }, [])
 
-  const loadPaySettings = useCallback(async () => {
-    try { const d = await apiFetch('/api/payment-settings'); setPs(d) }
-    catch {}
-  }, [])
 
   useEffect(() => { load() }, [load])
   useEffect(() => { if (tab === 'orders') loadOrders() }, [tab])
-  useEffect(() => { if (tab === 'payment') loadPaySettings() }, [tab])
 
   const close    = () => { setModal(null); setForm({}) }
   const wrap     = async (fn) => { setSaving(true); try { await fn() } catch { toast('Error saving','err') } setSaving(false) }
@@ -135,15 +129,6 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     } catch { toast('Failed to save','err') }
   }
 
-  /* Save payment settings */
-  const savePs = async () => {
-    setPsSaving(true)
-    try {
-      await apiFetch('/api/admin/payment-settings','PUT', ps)
-      toast('Payment settings saved!','ok')
-    } catch { toast('Failed to save','err') }
-    setPsSaving(false)
-  }
 
   const catName = id => (store.categories.find(c=>c.id===id)||{}).name||'—'
   const subName = id => (store.subcategories.find(s=>s.id===id)||{}).name||'—'
@@ -163,18 +148,6 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
     boxShadow: tab===t ? '0 0 12px rgba(255,60,0,0.3)' : 'none',
   })
 
-  const toggle = (key) => setPs(p => ({...p, [key]: !p[key]}))
-  const ToggleSwitch = ({ on, onChange, label, desc }) => (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:`1px solid ${C.border}` }}>
-      <div>
-        <div style={{ fontWeight:600, fontSize:14 }}>{label}</div>
-        {desc && <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{desc}</div>}
-      </div>
-      <div onClick={onChange} style={{ width:48, height:26, borderRadius:13, background:on?'#7c3aed':'rgba(255,255,255,0.1)', cursor:'pointer', position:'relative', transition:'background .2s', flexShrink:0 }}>
-        <div style={{ position:'absolute', top:3, left:on?22:3, width:20, height:20, borderRadius:'50%', background:'#fff', transition:'left .2s' }}/>
-      </div>
-    </div>
-  )
 
   if (loading) return <div style={{ textAlign:'center',padding:60 }}><Spinner size={32}/></div>
 
@@ -196,7 +169,6 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
         <button style={tabStyle('categories')}    onClick={()=>setTab('categories')}>📁 Categories ({store.categories.length})</button>
         <button style={tabStyle('subcategories')} onClick={()=>setTab('subcategories')}>📂 Subcategories ({store.subcategories.length})</button>
         <button style={tabStyle('orders')}        onClick={()=>setTab('orders')}>📦 Orders</button>
-        {isMainAdmin && <button style={tabStyle('payment')} onClick={()=>setTab('payment')}>💳 Payment Settings</button>}
       </div>
 
       {/* ── PRODUCTS ── */}
@@ -220,7 +192,6 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                   <Td><Badge label={p.inStock?'In Stock':'Out'} color={p.inStock?'green':'red'}/></Td>
                   <Td><div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
                     <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...p,price:String(p.price)}); setModal('editProd') }}>Edit</Btn>
-                    <Btn size="sm" variant="success" onClick={()=>{ setSellModal(p); setSellForm({ name:'', phone:'', address:'', qty:1 }) }}>💰 Sell</Btn>
                     {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delProd(p.id)}>Del</Btn>}
                   </div></Td>
                 </tr>
@@ -264,6 +235,7 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                 <Td style={{ color:C.muted,fontSize:13 }}>{store.products.filter(p=>p.subcategoryId===sub.id).length} items</Td>
                 <Td><div style={{ display:'flex',gap:6 }}>
                   <Btn size="sm" variant="ghost"  onClick={()=>{ setForm({...sub}); setModal('editSub') }}>Edit</Btn>
+                  <Btn size="sm" variant="success" onClick={()=>{ setSellSubModal(sub); setSellSelectedProd(null); setSellForm({ name:'', phone:'', address:'', qty:1 }) }}>💰 Sell</Btn>
                   {isMainAdmin && <Btn size="sm" variant="danger" onClick={()=>delSub(sub.id)}>Del</Btn>}
                 </div></Td>
               </tr>
@@ -329,8 +301,8 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
                               <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                                 <span style={{ fontSize:12,color:delivDate==='—'?C.muted:'#22c55e' }}>{delivDate}</span>
                                 <button onClick={()=>{ setDeliveryModal({...o, id:oid}); setDeliveryDate(m.deliveryDate||'') }}
-                                  style={{ background:'rgba(124,58,237,0.15)',border:'1px solid rgba(124,58,237,0.3)',borderRadius:6,color:'#bb86fc',cursor:'pointer',fontSize:11,padding:'3px 8px' }}>
-                                  {delivDate==='—'?'Set':'Edit'}
+                                  style={{ background: delivDate==='—' ? 'rgba(124,58,237,0.15)' : 'rgba(34,197,94,0.12)', border: delivDate==='—' ? '1px solid rgba(124,58,237,0.3)' : '1px solid rgba(34,197,94,0.3)', borderRadius:6, color: delivDate==='—' ? '#bb86fc' : '#22c55e', cursor:'pointer', fontSize:11, padding:'3px 8px' }}>
+                                  {delivDate==='—' ? 'Set' : '✏ Update'}
                                 </button>
                               </div>
                             </Td>
@@ -346,36 +318,75 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
         </>
       )}
 
-      {/* ── PAYMENT SETTINGS (main admin only) ── */}
-      {tab==='payment' && isMainAdmin && (
-        <div style={{ maxWidth:560 }}>
-          <Card style={{ padding:26 }}>
-            <div style={{ fontWeight:700,fontSize:16,color:'#bb86fc',marginBottom:6 }}>💳 Payment Gateway Settings</div>
-            <div style={{ fontSize:13,color:C.muted,marginBottom:20 }}>Choose which payment options appear on the Store and Pricing pages.</div>
-            <ToggleSwitch on={ps.razorpay} onChange={()=>toggle('razorpay')} label="💳 Razorpay" desc="Card, Net Banking, GPay, PhonePe via Razorpay"/>
-            <ToggleSwitch on={ps.phonepe}  onChange={()=>toggle('phonepe')}  label="📱 PhonePe Direct UPI" desc="Direct UPI deep-link — best on mobile"/>
-            <ToggleSwitch on={ps.gymcash}  onChange={()=>toggle('gymcash')}  label="🏋 Buy at Gym Counter" desc="Customer pays cash or UPI at the gym"/>
-            <ToggleSwitch on={ps.whatsapp} onChange={()=>toggle('whatsapp')} label="💬 WhatsApp Order" desc="Opens pre-filled WhatsApp message to gym number"/>
-            {ps.whatsapp && (
-              <div style={{ marginTop:14 }}>
-                <label style={{ fontSize:12,color:C.muted,display:'block',marginBottom:6 }}>WhatsApp Number (with country code, no +)</label>
-                <input
-                  style={{ ...inp, maxWidth:240 }}
-                  value={ps.waNumber}
-                  onChange={e=>setPs(p=>({...p, waNumber:e.target.value.replace(/\D/g,''  )}))}
-                  placeholder="918484805154"
-                />
-                <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>Format: 91XXXXXXXXXX (India)</div>
-              </div>
-            )}
-            <div style={{ marginTop:22 }}>
-              <Btn onClick={savePs} disabled={psSaving}>{psSaving?<Spinner/>:'Save Settings'}</Btn>
-            </div>
-          </Card>
-        </div>
-      )}
 
       {/* ═══ MODALS ═══ */}
+
+      {/* Sell at Gym — Subcategory Browse Modal */}
+      {sellSubModal && (
+        <Modal title={`💰 Sell from: ${sellSubModal.name}`} onClose={()=>{ setSellSubModal(null); setSellSelectedProd(null) }} wide>
+          {!sellSelectedProd ? (
+            <>
+              <p style={{ fontSize:13,color:C.muted,marginBottom:16 }}>Select a product to sell:</p>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12 }}>
+                {store.products.filter(p=>p.subcategoryId===sellSubModal.id && p.inStock!==false).map(p=>(
+                  <div key={p.id} onClick={()=>setSellSelectedProd(p)}
+                    style={{ background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:12,padding:12,cursor:'pointer',transition:'border .15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor='#7c3aed'}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                    <img src={p.image||ph} alt="" style={{ width:'100%',height:100,objectFit:'cover',borderRadius:8,marginBottom:8 }}/>
+                    <div style={{ fontWeight:600,fontSize:13 }}>{p.name}</div>
+                    <div style={{ color:C.accent,fontWeight:700,fontSize:15,marginTop:4 }}>₹{p.price}</div>
+                  </div>
+                ))}
+                {store.products.filter(p=>p.subcategoryId===sellSubModal.id && p.inStock!==false).length===0 && (
+                  <p style={{ color:C.muted,fontSize:13,gridColumn:'1/-1' }}>No in-stock products in this subcategory.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:16 }}>
+                <button onClick={()=>setSellSelectedProd(null)} style={{ background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:13,textDecoration:'underline',padding:0 }}>← Back</button>
+                <span style={{ color:C.muted,fontSize:13 }}>Select a different product</span>
+              </div>
+              <div style={{ background:'rgba(124,58,237,0.08)',border:`1px solid ${C.border}`,borderRadius:10,padding:'12px 14px',marginBottom:16 }}>
+                <div style={{ fontWeight:700,fontSize:15 }}>{sellSelectedProd.name}</div>
+                <div style={{ color:C.accent,fontWeight:800,fontSize:20,marginTop:2 }}>₹{sellSelectedProd.price} <span style={{ fontSize:13,color:C.muted,fontWeight:400 }}>per unit</span></div>
+              </div>
+              <FR label="Customer Name *">
+                <input style={inp} value={sellForm.name} onChange={e=>setSellForm(f=>({...f,name:e.target.value}))} placeholder="Rahul Sharma"/>
+              </FR>
+              <FR label="Phone Number *">
+                <input style={inp} type="tel" value={sellForm.phone} onChange={e=>setSellForm(f=>({...f,phone:e.target.value}))} placeholder="10-digit mobile"/>
+              </FR>
+              <FR label="Address (optional)">
+                <input style={inp} value={sellForm.address} onChange={e=>setSellForm(f=>({...f,address:e.target.value}))} placeholder="Customer address"/>
+              </FR>
+              <FR label="Quantity">
+                <input style={{ ...inp,maxWidth:100 }} type="number" min="1" value={sellForm.qty} onChange={e=>setSellForm(f=>({...f,qty:Math.max(1,Number(e.target.value))}))}/>
+              </FR>
+              <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:14 }}>
+                Total: <strong style={{ color:'#22c55e',fontSize:16 }}>₹{sellSelectedProd.price * sellForm.qty}</strong>
+              </div>
+              <div style={{ display:'flex',gap:10 }}>
+                <Btn onClick={async()=>{
+                  if (!sellForm.name.trim()||sellForm.phone.replace(/\D/g,'').length<10) return toast('Name and phone required','err')
+                  setSellSaving(true)
+                  try {
+                    const qty = Number(sellForm.qty)||1
+                    await fetch(`${API}/api/store/gym-order`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:sellForm.name,customerPhone:sellForm.phone,address:sellForm.address||'',productName:sellSelectedProd.name,productPrice:sellSelectedProd.price*qty,itemId:sellSelectedProd.id,qty,status:'paid'})})
+                    toast(`Sale recorded: ${sellSelectedProd.name} x${qty} — ₹${sellSelectedProd.price*qty}`,'ok')
+                    setSellSubModal(null); setSellSelectedProd(null); setSellForm({name:'',phone:'',address:'',qty:1})
+                    if (tab==='orders') await loadOrders()
+                  } catch { toast('Error recording sale','err') }
+                  setSellSaving(false)
+                }} disabled={sellSaving} style={{ flex:1,justifyContent:'center' }}>{sellSaving?<Spinner/>:'✅ Confirm Sale (Cash Collected)'}</Btn>
+                <Btn variant="muted" onClick={()=>{ setSellSubModal(null); setSellSelectedProd(null) }} style={{ flex:1,justifyContent:'center' }}>Cancel</Btn>
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
 
       {/* Sell at Gym Modal */}
       {sellModal && (
@@ -408,12 +419,17 @@ export default function AdminStore({ apiFetch, ImageUploader, Btn, Card, Modal, 
 
       {/* Delivery Date Modal */}
       {deliveryModal && (
-        <Modal title="📦 Set Delivery Date" onClose={()=>setDeliveryModal(null)}>
+        <Modal title={deliveryModal.meta?.deliveryDate ? '✏ Update Delivery Date' : '📦 Set Delivery Date'} onClose={()=>setDeliveryModal(null)}>
+          {deliveryModal.meta?.deliveryDate && (
+            <div style={{ background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,padding:'9px 12px',marginBottom:12,fontSize:13,color:'#4ade80' }}>
+              Currently set to: <strong>{deliveryModal.meta.deliveryDate}</strong> — you can update it below.
+            </div>
+          )}
           <FR label="Delivery Date">
             <input style={inp} type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)}/>
           </FR>
           <div style={{ display:'flex',gap:10,marginTop:8 }}>
-            <Btn onClick={saveDelivery} style={{ flex:1,justifyContent:'center' }}>Save</Btn>
+            <Btn onClick={saveDelivery} style={{ flex:1,justifyContent:'center' }}>{deliveryModal.meta?.deliveryDate ? 'Update Date' : 'Save Date'}</Btn>
             <Btn variant="muted" onClick={()=>setDeliveryModal(null)} style={{ flex:1,justifyContent:'center' }}>Cancel</Btn>
           </div>
         </Modal>
